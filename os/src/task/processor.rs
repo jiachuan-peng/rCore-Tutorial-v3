@@ -48,8 +48,11 @@ pub fn run_tasks() {
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             // access coming task TCB exclusively
             let mut task_inner = task.inner_exclusive_access();
-            let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
             task_inner.task_status = TaskStatus::Running;
+            if task_inner.remaining_slice == 0 {
+                task_inner.remaining_slice = task_inner.time_slice;
+            }
+            let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
             drop(task_inner);
             // release coming task TCB manually
             processor.current = Some(task);

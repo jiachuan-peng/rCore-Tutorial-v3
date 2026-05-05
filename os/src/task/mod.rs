@@ -42,6 +42,22 @@ pub use processor::{
     Processor, current_task, current_trap_cx, current_user_token, run_tasks, schedule,
     take_current_task,
 };
+/// Decrement the running task's time slice on a timer tick; returns true when the slice just ended.
+pub fn current_task_time_slice_exhausted() -> bool {
+    if let Some(task) = current_task() {
+        let mut inner = task.inner_exclusive_access();
+        if inner.task_status != TaskStatus::Running {
+            return false;
+        }
+        if inner.remaining_slice > 0 {
+            inner.remaining_slice -= 1;
+        }
+        inner.remaining_slice == 0
+    } else {
+        false
+    }
+}
+
 /// Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
@@ -50,13 +66,17 @@ pub fn suspend_current_and_run_next() {
     // ---- access current TCB exclusively
     let mut task_inner = task.inner_exclusive_access();
     let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
-    // Change status to Ready
-    task_inner.task_status = TaskStatus::Ready;
+    let requeue = task_inner.task_status == TaskStatus::Running;
+    if requeue {
+        task_inner.task_status = TaskStatus::Ready;
+        task_inner.remaining_slice = task_inner.time_slice;
+    }
     drop(task_inner);
     // ---- release current PCB
 
-    // push back to ready queue.
-    add_task(task);
+    if requeue {
+        add_task(task);
+    }
     // jump to scheduling cycle
     schedule(task_cx_ptr);
 }
