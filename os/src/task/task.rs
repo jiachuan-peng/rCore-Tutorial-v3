@@ -9,6 +9,37 @@ use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use core::cell::RefMut;
 
+/// Number of RMS static priority levels (0..= [`LOWEST_PRIORITY`]).
+pub const MAX_PRIORITY: usize = 32;
+/// Smallest `priority` value (highest precedence).
+pub const HIGHEST_PRIORITY: usize = 0;
+/// Largest `priority` value (lowest precedence).
+pub const LOWEST_PRIORITY: usize = MAX_PRIORITY - 1;
+
+/// Minimum valid RMS period (inclusive), in timer ticks.
+pub const MIN_PERIOD_TICKS: usize = 1;
+/// Maximum valid RMS period (inclusive), in timer ticks.
+pub const MAX_PERIOD_TICKS: usize = 1024;
+/// Default RMS period for a newly created task, in timer ticks.
+pub const DEFAULT_PERIOD_TICKS: usize = 100;
+/// Default length of one scheduling time slice, in timer ticks.
+pub const DEFAULT_TIME_SLICE: usize = 5;
+
+/// Map an RMS period in timer ticks to a static priority in `0..= LOWEST_PRIORITY`.
+///
+/// Shorter periods yield smaller (higher-precedence) priorities. `period_ticks` is
+/// clamped to [`MIN_PERIOD_TICKS`]..=[`MAX_PERIOD_TICKS`] before mapping.
+pub fn period_to_priority(period_ticks: usize) -> usize {
+    let period = if period_ticks < MIN_PERIOD_TICKS {
+        MIN_PERIOD_TICKS
+    } else if period_ticks > MAX_PERIOD_TICKS {
+        MAX_PERIOD_TICKS
+    } else {
+        period_ticks
+    };
+    (period - MIN_PERIOD_TICKS) * (MAX_PRIORITY - 1) / (MAX_PERIOD_TICKS - MIN_PERIOD_TICKS)
+}
+
 pub struct TaskControlBlock {
     // immutable
     pub pid: PidHandle,
@@ -27,6 +58,14 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+    /// RMS period in timer ticks (shorter period => higher RMS priority).
+    pub period_ticks: usize,
+    /// Static priority: smaller is higher; range `HIGHEST_PRIORITY`..=`LOWEST_PRIORITY`.
+    pub priority: usize,
+    /// Time slice length for same-priority round-robin.
+    pub time_slice: usize,
+    /// Remaining time in the current slice.
+    pub remaining_slice: usize,
 }
 
 impl TaskControlBlockInner {
@@ -64,6 +103,9 @@ impl TaskControlBlock {
         let pid_handle = pid_alloc();
         let kernel_stack = KernelStack::new(&pid_handle);
         let kernel_stack_top = kernel_stack.get_top();
+        let period_ticks = DEFAULT_PERIOD_TICKS;
+        let priority = period_to_priority(period_ticks);
+        let time_slice = DEFAULT_TIME_SLICE;
         // push a task context which goes to trap_return to the top of kernel stack
         let task_control_block = Self {
             pid: pid_handle,
@@ -78,6 +120,10 @@ impl TaskControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    period_ticks,
+                    priority,
+                    time_slice,
+                    remaining_slice: time_slice,
                 })
             },
         };
@@ -132,6 +178,9 @@ impl TaskControlBlock {
         let pid_handle = pid_alloc();
         let kernel_stack = KernelStack::new(&pid_handle);
         let kernel_stack_top = kernel_stack.get_top();
+        let period_ticks = parent_inner.period_ticks;
+        let priority = parent_inner.priority;
+        let time_slice = parent_inner.time_slice;
         let task_control_block = Arc::new(TaskControlBlock {
             pid: pid_handle,
             kernel_stack,
@@ -145,6 +194,10 @@ impl TaskControlBlock {
                     parent: Some(Arc::downgrade(self)),
                     children: Vec::new(),
                     exit_code: 0,
+                    period_ticks,
+                    priority,
+                    time_slice,
+                    remaining_slice: time_slice,
                 })
             },
         });
@@ -166,7 +219,14 @@ impl TaskControlBlock {
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
+    /// Runnable and may be selected by the scheduler.
     Ready,
+    /// Currently executing on a CPU.
     Running,
+    /// Not runnable (e.g. I/O wait); not used by the current FIFO scheduler.
+    Blocked,
+    /// Explicitly suspended; not used by the current FIFO scheduler.
+    Suspended,
+    /// Exited; TCB kept until parent `waitpid` reclaims it.
     Zombie,
 }

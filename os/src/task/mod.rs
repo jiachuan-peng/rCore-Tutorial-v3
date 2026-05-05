@@ -29,6 +29,11 @@ use lazy_static::*;
 pub use manager::{TaskManager, fetch_task};
 use switch::__switch;
 use task::{TaskControlBlock, TaskStatus};
+pub use task::{
+    period_to_priority,
+    DEFAULT_PERIOD_TICKS, DEFAULT_TIME_SLICE, HIGHEST_PRIORITY, LOWEST_PRIORITY, MAX_PERIOD_TICKS,
+    MAX_PRIORITY, MIN_PERIOD_TICKS,
+};
 
 pub use context::TaskContext;
 pub use manager::add_task;
