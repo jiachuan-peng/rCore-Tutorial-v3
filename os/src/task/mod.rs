@@ -58,6 +58,24 @@ pub fn current_task_time_slice_exhausted() -> bool {
     }
 }
 
+/// True if the ready queues hold a task with strictly higher precedence than the running task.
+pub fn should_preempt_current() -> bool {
+    if let Some(task) = current_task() {
+        let current_priority = {
+            let inner = task.inner_exclusive_access();
+            if inner.task_status != TaskStatus::Running {
+                return false;
+            }
+            inner.priority
+        };
+        manager::TASK_MANAGER
+            .exclusive_access()
+            .has_higher_priority_task(current_priority)
+    } else {
+        false
+    }
+}
+
 /// Suspend the current 'Running' task and run the next task in task list.
 pub fn suspend_current_and_run_next() {
     // There must be an application running.

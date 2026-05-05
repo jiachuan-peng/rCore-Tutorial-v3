@@ -9,15 +9,16 @@
 //! [`trap_handler()`].
 //!
 //! It then calls different functionality based on what exactly the exception
-//! was. For example, timer interrupts decrement the running task's time slice
-//! and only yield when the slice is exhausted; syscalls go to [`syscall()`].
+//! was. For example, timer interrupts decrement the running task's time slice,
+//! then yield when the slice ends or a strictly higher-priority task is ready;
+//! syscalls go to [`syscall()`].
 mod context;
 
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::syscall;
 use crate::task::{
     current_task_time_slice_exhausted, current_trap_cx, current_user_token,
-    exit_current_and_run_next, suspend_current_and_run_next,
+    exit_current_and_run_next, should_preempt_current, suspend_current_and_run_next,
 };
 use crate::timer::set_next_trigger;
 use core::arch::{asm, global_asm};
@@ -90,7 +91,9 @@ pub fn trap_handler() -> ! {
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             set_next_trigger();
-            if current_task_time_slice_exhausted() {
+            let time_slice_exhausted = current_task_time_slice_exhausted();
+            let priority_preempted = should_preempt_current();
+            if time_slice_exhausted || priority_preempted {
                 suspend_current_and_run_next();
             }
         }

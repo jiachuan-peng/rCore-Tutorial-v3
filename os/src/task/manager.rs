@@ -60,6 +60,25 @@ impl TaskManager {
         }
         None
     }
+    /// Read-only check: any ready task strictly higher precedence than `current_priority`?
+    ///
+    /// Does not modify queues or task state. When `current_priority == 0`, nothing is higher.
+    pub fn has_higher_priority_task(&self, current_priority: usize) -> bool {
+        if current_priority == 0 {
+            return false;
+        }
+        let upper = if current_priority > MAX_PRIORITY {
+            MAX_PRIORITY
+        } else {
+            current_priority
+        };
+        for priority in 0..upper {
+            if !self.ready_queues[priority].is_empty() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 lazy_static! {
