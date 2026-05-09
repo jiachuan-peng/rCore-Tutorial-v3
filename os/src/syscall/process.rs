@@ -1,8 +1,8 @@
 use crate::loader::get_app_data_by_name;
 use crate::mm::{translated_refmut, translated_str};
 use crate::task::{
-    add_task, current_task, current_user_token, exit_current_and_run_next, period_to_priority,
-    suspend_current_and_run_next,
+    add_task, block_current_and_run_next, current_task, current_user_token,
+    exit_current_and_run_next, period_to_priority, suspend_current_and_run_next,
 };
 use crate::timer::get_time_ms;
 use alloc::sync::Arc;
@@ -83,38 +83,31 @@ pub fn sys_get_period() -> isize {
 }
 
 /// If there is not a child process whose pid is same as given, return -1.
-/// Else if there is a child process but it is still running, return -2.
+/// If matching children exist but none is zombie yet, block until a child exits (event wakeup).
 pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
-    let task = current_task().unwrap();
-    // find a child process
-
-    // ---- access current TCB exclusively
-    let mut inner = task.inner_exclusive_access();
-    if !inner
-        .children
-        .iter()
-        .any(|p| pid == -1 || pid as usize == p.getpid())
-    {
-        return -1;
-        // ---- release current PCB
+    loop {
+        let task = current_task().unwrap();
+        let mut inner = task.inner_exclusive_access();
+        if !inner
+            .children
+            .iter()
+            .any(|p| pid == -1 || pid as usize == p.getpid())
+        {
+            return -1;
+        }
+        let pair = inner.children.iter().enumerate().find(|(_, p)| {
+            p.inner_exclusive_access().is_zombie() && (pid == -1 || pid as usize == p.getpid())
+        });
+        if let Some((idx, _)) = pair {
+            let child = inner.children.remove(idx);
+            assert_eq!(Arc::strong_count(&child), 1);
+            let found_pid = child.getpid();
+            let exit_code = child.inner_exclusive_access().exit_code;
+            *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
+            return found_pid as isize;
+        }
+        let wait_spec = if pid == -1 { -1 } else { pid };
+        drop(inner);
+        block_current_and_run_next(wait_spec);
     }
-    let pair = inner.children.iter().enumerate().find(|(_, p)| {
-        // ++++ temporarily access child PCB lock exclusively
-        p.inner_exclusive_access().is_zombie() && (pid == -1 || pid as usize == p.getpid())
-        // ++++ release child PCB
-    });
-    if let Some((idx, _)) = pair {
-        let child = inner.children.remove(idx);
-        // confirm that child will be deallocated after removing from children list
-        assert_eq!(Arc::strong_count(&child), 1);
-        let found_pid = child.getpid();
-        // ++++ temporarily access child TCB exclusively
-        let exit_code = child.inner_exclusive_access().exit_code;
-        // ++++ release child PCB
-        *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
-        found_pid as isize
-    } else {
-        -2
-    }
-    // ---- release current PCB lock automatically
 }

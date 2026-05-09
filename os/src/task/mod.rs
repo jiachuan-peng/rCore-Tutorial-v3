@@ -32,7 +32,7 @@ use task::{TaskControlBlock, TaskStatus};
 pub use task::{
     period_to_priority,
     DEFAULT_PERIOD_TICKS, DEFAULT_TIME_SLICE, HIGHEST_PRIORITY, LOWEST_PRIORITY, MAX_PERIOD_TICKS,
-    MAX_PRIORITY, MIN_PERIOD_TICKS,
+    MAX_PRIORITY, MIN_PERIOD_TICKS, WAITPID_NONE,
 };
 
 pub use context::TaskContext;
@@ -121,22 +121,26 @@ pub fn suspend_current_and_run_next() {
     schedule(task_cx_ptr);
 }
 
-//阻塞当前进程并运行下一个进程
-pub fn block_current_and_run_next() {
+/// Block current task for `waitpid` (`waiting_pid`: `-1` = any child, else specific pid). Does not enqueue.
+pub fn block_current_and_run_next(waiting_pid: isize) {
     let task = take_current_task().unwrap();
+
+    if ENABLE_SCHED_TRACE {
+        println!(
+            "[sched] block pid={} waiting_pid={}",
+            task.getpid(),
+            waiting_pid
+        );
+    }
 
     let mut task_inner = task.inner_exclusive_access();
     let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
-
     task_inner.task_status = TaskStatus::Blocked;
-
+    task_inner.waiting_pid = waiting_pid;
     drop(task_inner);
-
-    // 注意：这里不要 add_task(task)
 
     schedule(task_cx_ptr);
 }
-
 
 /// pid of usertests app in make run TEST=1
 pub const IDLE_PID: usize = 0;
@@ -167,6 +171,11 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     inner.task_status = TaskStatus::Zombie;
     // Record exit code
     inner.exit_code = exit_code;
+    let parent_for_wake = inner
+        .parent
+        .as_ref()
+        .and_then(|weak_parent| weak_parent.upgrade());
+    let exited_pid = pid as isize;
     // do not move to its parent but under initproc
 
     // ++++++ access initproc TCB exclusively
@@ -184,6 +193,19 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     inner.memory_set.recycle_data_pages();
     drop(inner);
     // **** release current PCB
+
+    if let Some(parent_arc) = parent_for_wake {
+        let mut p_inner = parent_arc.inner_exclusive_access();
+        if p_inner.task_status == TaskStatus::Blocked
+            && (p_inner.waiting_pid == -1 || p_inner.waiting_pid == exited_pid)
+        {
+            p_inner.task_status = TaskStatus::Ready;
+            p_inner.waiting_pid = WAITPID_NONE;
+            drop(p_inner);
+            add_task(parent_arc);
+        }
+    }
+
     // drop task manually to maintain rc correctly
     drop(task);
     // we do not have to save task context
