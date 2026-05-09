@@ -21,7 +21,7 @@ pub const MIN_PERIOD_TICKS: usize = 1;
 /// Maximum valid RMS period (inclusive), in timer ticks.
 pub const MAX_PERIOD_TICKS: usize = 1024;
 /// Default RMS period for a newly created task, in timer ticks.
-pub const DEFAULT_PERIOD_TICKS: usize = 100;
+pub const DEFAULT_PERIOD_TICKS: usize = 120;
 /// Default length of one scheduling time slice, in timer ticks.
 pub const DEFAULT_TIME_SLICE: usize = 5;
 
@@ -58,6 +58,8 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+    
+
     /// RMS period in timer ticks (shorter period => higher RMS priority).
     pub period_ticks: usize,
     /// Static priority: smaller is higher; range `HIGHEST_PRIORITY`..=`LOWEST_PRIORITY`.
@@ -120,6 +122,7 @@ impl TaskControlBlock {
                     parent: None,
                     children: Vec::new(),
                     exit_code: 0,
+                    
                     period_ticks,
                     priority,
                     time_slice,
@@ -186,6 +189,8 @@ impl TaskControlBlock {
             kernel_stack,
             inner: unsafe {
                 UPSafeCell::new(TaskControlBlockInner {
+                    
+           
                     trap_cx_ppn,
                     base_size: parent_inner.base_size,
                     task_cx: TaskContext::goto_trap_return(kernel_stack_top),

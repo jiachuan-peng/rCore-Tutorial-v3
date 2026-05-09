@@ -42,6 +42,10 @@ pub use processor::{
     Processor, current_task, current_trap_cx, current_user_token, run_tasks, schedule,
     take_current_task,
 };
+
+/// When true, emit concise `[sched]` lines from the scheduler (default off for tests).
+pub const ENABLE_SCHED_TRACE: bool = false;
+
 /// Decrement the running task's time slice on a timer tick; returns true when the slice just ended.
 pub fn current_task_time_slice_exhausted() -> bool {
     if let Some(task) = current_task() {
@@ -52,7 +56,13 @@ pub fn current_task_time_slice_exhausted() -> bool {
         if inner.remaining_slice > 0 {
             inner.remaining_slice -= 1;
         }
-        inner.remaining_slice == 0
+        let exhausted = inner.remaining_slice == 0;
+        if exhausted && ENABLE_SCHED_TRACE {
+            let pid = task.getpid();
+            let prio = inner.priority;
+            println!("[sched] timeslice exhausted pid={} prio={}", pid, prio);
+        }
+        exhausted
     } else {
         false
     }
@@ -68,9 +78,17 @@ pub fn should_preempt_current() -> bool {
             }
             inner.priority
         };
-        manager::TASK_MANAGER
+        let preempt = manager::TASK_MANAGER
             .exclusive_access()
-            .has_higher_priority_task(current_priority)
+            .has_higher_priority_task(current_priority);
+        if preempt && ENABLE_SCHED_TRACE {
+            println!(
+                "[sched] preempt pid={} prio={} by higher priority task",
+                task.getpid(),
+                current_priority
+            );
+        }
+        preempt
     } else {
         false
     }
@@ -80,6 +98,10 @@ pub fn should_preempt_current() -> bool {
 pub fn suspend_current_and_run_next() {
     // There must be an application running.
     let task = take_current_task().unwrap();
+
+    if ENABLE_SCHED_TRACE {
+        println!("[sched] switch out pid={}", task.getpid());
+    }
 
     // ---- access current TCB exclusively
     let mut task_inner = task.inner_exclusive_access();
@@ -98,6 +120,23 @@ pub fn suspend_current_and_run_next() {
     // jump to scheduling cycle
     schedule(task_cx_ptr);
 }
+
+//阻塞当前进程并运行下一个进程
+pub fn block_current_and_run_next() {
+    let task = take_current_task().unwrap();
+
+    let mut task_inner = task.inner_exclusive_access();
+    let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
+
+    task_inner.task_status = TaskStatus::Blocked;
+
+    drop(task_inner);
+
+    // 注意：这里不要 add_task(task)
+
+    schedule(task_cx_ptr);
+}
+
 
 /// pid of usertests app in make run TEST=1
 pub const IDLE_PID: usize = 0;

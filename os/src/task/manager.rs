@@ -1,5 +1,5 @@
 //!Implementation of [`TaskManager`]
-use super::{LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus};
+use super::{ENABLE_SCHED_TRACE, LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus};
 use crate::sync::UPSafeCell;
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
@@ -49,12 +49,27 @@ impl TaskManager {
                 task_inner.priority
             }
         };
+        if ENABLE_SCHED_TRACE {
+            let pid = task.getpid();
+            let inn = task.inner_exclusive_access();
+            println!(
+                "[sched] enqueue pid={} prio={} period={}",
+                pid,
+                inn.priority,
+                inn.period_ticks
+            );
+        }
         self.ready_queues[queue_idx].push_back(task);
     }
     /// Pop the next runnable task: highest precedence first (`priority` ascending), FIFO within level.
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
         for priority in 0..MAX_PRIORITY {
             if let Some(task) = self.ready_queues[priority].pop_front() {
+                if ENABLE_SCHED_TRACE {
+                    let pid = task.getpid();
+                    let inn = task.inner_exclusive_access();
+                    println!("[sched] fetch pid={} prio={}", pid, inn.priority);
+                }
                 return Some(task);
             }
         }
@@ -78,6 +93,47 @@ impl TaskManager {
             }
         }
         false
+    }
+
+    /// Returns whether any ready queue holds a task with the given PID (read-only).
+    #[allow(dead_code)]
+    pub fn ready_contains_pid(&self, pid: usize) -> bool {
+        self.ready_priority_of_pid(pid).is_some()
+    }
+
+    /// If a task with `pid` is in some ready queue, returns that queue index (`priority` level).
+    #[allow(dead_code)]
+    pub fn ready_priority_of_pid(&self, pid: usize) -> Option<usize> {
+        for (prio, q) in self.ready_queues.iter().enumerate() {
+            if q.iter().any(|t| t.getpid() == pid) {
+                return Some(prio);
+            }
+        }
+        None
+    }
+
+    /// Removes the first queued task with `pid` from whichever priority queue it sits in.
+    ///
+    /// Does not change [`TaskControlBlock`] state; only detaches it from ready queues.
+    /// Returns `None` if not present.
+    #[allow(dead_code)]
+    pub fn remove_ready_by_pid(&mut self, pid: usize) -> Option<Arc<TaskControlBlock>> {
+        for queue in self.ready_queues.iter_mut() {
+            let mut kept = VecDeque::new();
+            let mut found = None;
+            while let Some(t) = queue.pop_front() {
+                if found.is_none() && t.getpid() == pid {
+                    found = Some(t);
+                } else {
+                    kept.push_back(t);
+                }
+            }
+            *queue = kept;
+            if found.is_some() {
+                return found;
+            }
+        }
+        None
     }
 }
 

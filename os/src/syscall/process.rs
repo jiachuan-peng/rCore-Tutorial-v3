@@ -1,7 +1,7 @@
 use crate::loader::get_app_data_by_name;
 use crate::mm::{translated_refmut, translated_str};
 use crate::task::{
-    add_task, current_task, current_user_token, exit_current_and_run_next,
+    add_task, current_task, current_user_token, exit_current_and_run_next, period_to_priority,
     suspend_current_and_run_next,
 };
 use crate::timer::get_time_ms;
@@ -49,6 +49,37 @@ pub fn sys_exec(path: *const u8) -> isize {
     } else {
         -1
     }
+}
+
+/// Set RMS period for the current task (ticks); recomputes static priority.
+///
+/// Rejects `period_ticks == 0` with `-1` (ambiguous / unsafe vs RMS mapping).
+pub fn sys_set_period(period_ticks: usize) -> isize {
+    if period_ticks == 0 {
+        return -1;
+    }
+    let Some(task) = current_task() else {
+        return -1;
+    };
+    let mut inner = task.inner_exclusive_access();
+    inner.period_ticks = period_ticks;
+    inner.priority = period_to_priority(period_ticks);
+    inner.remaining_slice = inner.time_slice;
+    0
+}
+
+/// Current task RMS static priority, or `-1` if none.
+pub fn sys_get_priority() -> isize {
+    current_task()
+        .map(|t| t.inner_exclusive_access().priority as isize)
+        .unwrap_or(-1)
+}
+
+/// Current task RMS period in ticks, or `-1` if none.
+pub fn sys_get_period() -> isize {
+    current_task()
+        .map(|t| t.inner_exclusive_access().period_ticks as isize)
+        .unwrap_or(-1)
 }
 
 /// If there is not a child process whose pid is same as given, return -1.

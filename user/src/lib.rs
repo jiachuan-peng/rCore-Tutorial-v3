@@ -57,6 +57,15 @@ pub fn get_time() -> isize {
 pub fn getpid() -> isize {
     sys_getpid()
 }
+pub fn set_period(period_ticks: usize) -> isize {
+    sys_set_period(period_ticks)
+}
+pub fn get_priority() -> isize {
+    sys_get_priority()
+}
+pub fn get_period() -> isize {
+    sys_get_period()
+}
 pub fn fork() -> isize {
     sys_fork()
 }
@@ -86,6 +95,7 @@ pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
         }
     }
 }
+
 pub fn sleep(period_ms: usize) {
     let start = sys_get_time();
     while sys_get_time() < start + period_ms as isize {

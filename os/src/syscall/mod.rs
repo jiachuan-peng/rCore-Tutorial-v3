@@ -18,6 +18,9 @@ const SYSCALL_GETPID: usize = 172;
 const SYSCALL_FORK: usize = 220;
 const SYSCALL_EXEC: usize = 221;
 const SYSCALL_WAITPID: usize = 260;
+const SYSCALL_SET_PERIOD: usize = 261;
+const SYSCALL_GET_PRIORITY: usize = 262;
+const SYSCALL_GET_PERIOD: usize = 263;
 
 mod fs;
 mod process;
@@ -36,6 +39,9 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_FORK => sys_fork(),
         SYSCALL_EXEC => sys_exec(args[0] as *const u8),
         SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
+        SYSCALL_SET_PERIOD => sys_set_period(args[0]),
+        SYSCALL_GET_PRIORITY => sys_get_priority(),
+        SYSCALL_GET_PERIOD => sys_get_period(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

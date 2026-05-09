@@ -1,7 +1,7 @@
 //!Implementation of [`Processor`] and Intersection of control flow
 use super::__switch;
 use super::{TaskContext, TaskControlBlock};
-use super::{TaskStatus, fetch_task};
+use super::{ENABLE_SCHED_TRACE, TaskStatus, fetch_task};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
@@ -54,6 +54,9 @@ pub fn run_tasks() {
             }
             let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
             drop(task_inner);
+            if ENABLE_SCHED_TRACE {
+                println!("[sched] switch in pid={}", task.getpid());
+            }
             // release coming task TCB manually
             processor.current = Some(task);
             // release processor manually
@@ -94,3 +97,5 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
 }
+
+
