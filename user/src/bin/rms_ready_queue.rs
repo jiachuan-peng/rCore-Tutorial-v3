@@ -25,8 +25,11 @@ pub fn main() -> i32 {
     for i in 0..3 {
         let p = fork();
         let start_time = get_time();
-        println!("fork pid={} start_time={}", getpid(), start_time);
+        
         if p == 0 {
+            let start_time = get_time();
+            println!("child pid={} start_time={} priority={}", getpid(), start_time, get_priority());
+
             if set_period(periods[i]) != 0 {
                 println!("set_period failed");
                 exit(-1);
@@ -35,23 +38,26 @@ pub fn main() -> i32 {
             let per = get_period();
             //let time_slice = get_time_slice();
             //let remaining_slice = get_remaining_slice();
-            println!("lookup: pid period prio time_slice remaining_slice:");
+            println!("lookup: pid period prio :");
             println!("{}, {}, {}", getpid(), per, prio);
+            yield_();
 
             let rounds = if periods[i] == 40 {
-                120usize
+                12000000usize
             } else {
-                300usize
+                30000000usize
             };
             for c in 0..rounds {
-                if c % 50 == 0 {
+                if c % 5000000 == 0 {
                     let current_time = get_time();
                     println!("                               run pid={} current_time={} times={}", getpid(), current_time, c);
                 }
-                yield_();
+               // yield_();
             }
             exit(exit_codes[i]);
-        }
+        }else {
+            println!("father pid={} start_time={} priority={}", getpid(), start_time, get_priority());}
+        
         kids[i] = p;
     }
 

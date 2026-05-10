@@ -23,7 +23,7 @@ pub const MAX_PERIOD_TICKS: usize = 1024;
 /// Default RMS period for a newly created task, in timer ticks.
 pub const DEFAULT_PERIOD_TICKS: usize = 1;
 /// Default length of one scheduling time slice, in timer ticks.
-pub const DEFAULT_TIME_SLICE: usize = 5;
+pub const DEFAULT_TIME_SLICE: usize = 2;
 
 /// Sentinel for [`TaskControlBlockInner::waiting_pid`] when not blocked in `waitpid`.
 pub const WAITPID_NONE: isize = -2;

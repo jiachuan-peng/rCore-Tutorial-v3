@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::{exit, fork, getpid, set_period, waitpid, yield_};
+use user_lib::{exit, fork, getpid, set_period, get_priority, get_period, waitpid, yield_};
 
 #[unsafe(no_mangle)]
 pub fn main() -> i32 {
@@ -16,7 +16,7 @@ pub fn main() -> i32 {
             set_period(100);
             for c in 0..6000usize {
                 if c % 400 == 0 {
-                    println!("rr pid={} cnt={}", getpid(), c);
+                    println!("rr pid={} cnt={} period={} priority={}", getpid(), c, get_period(), get_priority());
                 }
                 yield_();
             }
