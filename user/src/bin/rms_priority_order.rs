@@ -4,7 +4,7 @@
 #[macro_use]
 extern crate user_lib;
 
-use user_lib::{exit, fork, get_period, get_priority, getpid, set_period, waitpid, yield_};
+use user_lib::{exit, fork, get_period, get_priority, getpid, set_period, waitpid};
 
 #[unsafe(no_mangle)]
 pub fn main() -> i32 {
