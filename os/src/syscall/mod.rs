@@ -21,6 +21,7 @@ const SYSCALL_WAITPID: usize = 260;
 const SYSCALL_SET_PERIOD: usize = 261;
 const SYSCALL_GET_PRIORITY: usize = 262;
 const SYSCALL_GET_PERIOD: usize = 263;
+const SYSCALL_GET_REMAINING_SLICE: usize = 264;
 
 mod fs;
 mod process;
@@ -42,6 +43,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_SET_PERIOD => sys_set_period(args[0]),
         SYSCALL_GET_PRIORITY => sys_get_priority(),
         SYSCALL_GET_PERIOD => sys_get_period(),
+        SYSCALL_GET_REMAINING_SLICE => sys_get_remaining_slice(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }

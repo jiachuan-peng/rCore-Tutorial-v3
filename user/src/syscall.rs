@@ -12,6 +12,7 @@ const SYSCALL_WAITPID: usize = 260;
 const SYSCALL_SET_PERIOD: usize = 261;
 const SYSCALL_GET_PRIORITY: usize = 262;
 const SYSCALL_GET_PERIOD: usize = 263;
+const SYSCALL_GET_REMAINING_SLICE: usize = 264;
 
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -77,4 +78,8 @@ pub fn sys_get_priority() -> isize {
 
 pub fn sys_get_period() -> isize {
     syscall(SYSCALL_GET_PERIOD, [0, 0, 0])
+}
+
+pub fn sys_get_remaining_slice() -> isize {
+    syscall(SYSCALL_GET_REMAINING_SLICE, [0, 0, 0])
 }

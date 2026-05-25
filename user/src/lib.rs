@@ -5,7 +5,7 @@
 #[macro_use]
 pub mod console;
 mod lang_items;
-mod syscall;
+pub mod syscall;
 
 use buddy_system_allocator::LockedHeap;
 use core::ptr::addr_of_mut;
@@ -66,6 +66,7 @@ pub fn get_priority() -> isize {
 pub fn get_period() -> isize {
     sys_get_period()
 }
+pub use syscall::sys_get_remaining_slice as get_remaining_slice;
 pub fn fork() -> isize {
     sys_fork()
 }
