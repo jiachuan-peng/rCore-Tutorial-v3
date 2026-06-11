@@ -1,0 +1,106 @@
+[rustsbi] RustSBI version 0.3.1, adapting to RISC-V SBI v1.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.2
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e010f6
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+[34m[ INFO] [kernel] Hello, world![0m
+last 31145 Physical Frames.
+.text [0x80200000, 0x80210000)
+.rodata [0x80210000, 0x80215000)
+.data [0x80215000, 0x80446000)
+.bss [0x80446000, 0x80657000)
+mapping .text section
+mapping .rodata section
+mapping .data section
+mapping .bss section
+mapping physical memory
+mapping memory-mapped registers
+remap_test passed!
+after initproc!
+/**** APPS ****
+exit
+fantastic_text
+forkexec
+forktest
+forktest2
+forktest_simple
+forktree
+hello_world
+initproc
+matrix
+rms_preempt
+rms_preempt_strict
+rms_priority_map
+rms_priority_order
+rms_ready_order
+rms_ready_queue
+rms_regression
+rms_remaining_slice
+rms_round_robin
+rms_rr_fairness
+rms_slice_trace
+rms_syscall_probe
+rms_waitpid_block
+rms_waitpid_regression
+sched_common_workload
+sleep
+sleep_simple
+stack_overflow
+user_shell
+usertests
+usertests-simple
+waitpid_common
+yield
+**************/
+Rust user shell
+>> rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=384 remaining=2
+EVENT type=slice pid=3 time=392 remaining=1
+EVENT type=slice pid=4 time=403 remaining=2
+EVENT type=slice pid=4 time=412 remaining=1
+EVENT type=slice pid=3 time=423 remaining=2
+EVENT type=slice pid=3 time=433 remaining=1
+EVENT type=slice pid=4 time=443 remaining=2
+EVENT type=slice pid=4 time=453 remaining=1
+EVENT type=slice pid=3 time=463 remaining=2
+EVENT type=slice pid=3 time=473 remaining=1
+EVENT type=slice pid=4 time=483 remaining=2
+EVENT type=slice pid=4 time=494 remaining=1
+EVENT type=slice pid=3 time=504 remaining=2
+EVENT type=slice pid=3 time=514 remaining=1
+EVENT type=slice pid=4 time=524 remaining=2
+EVENT type=slice pid=4 time=534 remaining=1
+EVENT type=slice pid=3 time=545 remaining=2
+EVENT type=slice pid=3 time=555 remaining=1
+EVENT type=slice pid=4 time=565 remaining=2
+EVENT type=slice pid=4 time=575 remaining=1
+EVENT type=slice pid=3 time=585 remaining=2
+EVENT type=slice pid=3 time=595 remaining=1
+EVENT type=slice pid=4 time=605 remaining=2
+EVENT type=slice pid=4 time=616 remaining=1
+EVENT type=slice pid=3 time=626 remaining=2
+RESULT type=worker_done pid=3 checksum=18321539530873446838
+EVENT type=slice pid=4 time=635 remaining=2
+EVENT type=slice pid=4 time=636 remaining=1
+EVENT type=slice pid=4 time=646 remaining=2
+RESULT type=worker_done pid=4 checksum=1223090715912816294
+SCHED_STATS timer=26 schedule=17 switch=17 fetch=17 scan=197 ts_preempt=13 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+Shell: Process 2 exited with code 0
+>> QEMU: Terminated
+

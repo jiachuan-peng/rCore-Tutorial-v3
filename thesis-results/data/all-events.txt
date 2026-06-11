@@ -1,0 +1,1265 @@
+TEST name=rms_priority_map phase=start
+DATA period=1 priority=0 expected=0
+DATA period=2 priority=0 expected=0
+DATA period=33 priority=0 expected=0
+DATA period=34 priority=1 expected=1
+DATA period=100 priority=3 expected=3
+DATA period=512 priority=15 expected=15
+DATA period=1023 priority=30 expected=30
+DATA period=1024 priority=31 expected=31
+DATA period=0 result=-1 retained_period=1024 retained_priority=31
+DATA period=1025 result=-1 retained_period=1024 retained_priority=31
+PASS name=rms_priority_map
+TEST name=rms_priority_map phase=start
+DATA period=1 priority=0 expected=0
+DATA period=2 priority=0 expected=0
+DATA period=33 priority=0 expected=0
+DATA period=34 priority=1 expected=1
+DATA period=100 priority=3 expected=3
+DATA period=512 priority=15 expected=15
+DATA period=1023 priority=30 expected=30
+DATA period=1024 priority=31 expected=31
+DATA period=0 result=-1 retained_period=1024 retained_priority=31
+DATA period=1025 result=-1 retained_period=1024 retained_priority=31
+PASS name=rms_priority_map
+TEST name=rms_priority_map phase=start
+DATA period=1 priority=0 expected=0
+DATA period=2 priority=0 expected=0
+DATA period=33 priority=0 expected=0
+DATA period=34 priority=1 expected=1
+DATA period=100 priority=3 expected=3
+DATA period=512 priority=15 expected=15
+DATA period=1023 priority=30 expected=30
+DATA period=1024 priority=31 expected=31
+DATA period=0 result=-1 retained_period=1024 retained_priority=31
+DATA period=1025 result=-1 retained_period=1024 retained_priority=31
+PASS name=rms_priority_map
+TEST name=rms_ready_order phase=start
+DATA type=created pid=3 period=900
+DATA type=created pid=4 period=400
+DATA type=created pid=5 period=100
+EVENT type=first_run pid=5 period=100 priority=3 time=19
+EVENT type=first_run pid=4 period=400 priority=12 time=22
+EVENT type=first_run pid=3 period=900 priority=27 time=24
+PASS name=rms_ready_order expected_period_order=100,400,900
+TEST name=rms_ready_order phase=start
+DATA type=created pid=3 period=900
+DATA type=created pid=4 period=400
+DATA type=created pid=5 period=100
+EVENT type=first_run pid=5 period=100 priority=3 time=386
+EVENT type=first_run pid=4 period=400 priority=12 time=387
+EVENT type=first_run pid=3 period=900 priority=27 time=387
+PASS name=rms_ready_order expected_period_order=100,400,900
+TEST name=rms_ready_order phase=start
+DATA type=created pid=3 period=900
+DATA type=created pid=4 period=400
+DATA type=created pid=5 period=100
+EVENT type=first_run pid=5 period=100 priority=3 time=385
+EVENT type=first_run pid=4 period=400 priority=12 time=386
+EVENT type=first_run pid=3 period=900 priority=27 time=386
+PASS name=rms_ready_order expected_period_order=100,400,900
+TEST name=rms_ready_order phase=start
+DATA type=created pid=3 period=900
+DATA type=created pid=4 period=400
+DATA type=created pid=5 period=100
+EVENT type=first_run pid=5 period=100 priority=3 time=385
+EVENT type=first_run pid=4 period=400 priority=12 time=386
+EVENT type=first_run pid=3 period=900 priority=27 time=386
+PASS name=rms_ready_order expected_period_order=100,400,900
+TEST name=rms_ready_order phase=start
+DATA type=created pid=3 period=900
+DATA type=created pid=4 period=400
+DATA type=created pid=5 period=100
+EVENT type=first_run pid=5 period=100 priority=3 time=381
+EVENT type=first_run pid=4 period=400 priority=12 time=381
+EVENT type=first_run pid=3 period=900 priority=27 time=382
+PASS name=rms_ready_order expected_period_order=100,400,900
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=19
+EVENT type=high_first_run pid=3 time=22 latency_ms=3
+EVENT type=low_finish pid=2 time=269 work_units=8193
+SCHED_STATS timer=25 schedule=14 switch=14 fetch=14 scan=368 ts_preempt=12 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=19 high_start_ms=22 low_finish_ms=269 latency_ms=3
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=383
+EVENT type=high_first_run pid=3 time=392 latency_ms=9
+EVENT type=low_finish pid=2 time=633 work_units=10566
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=383 high_start_ms=392 low_finish_ms=633 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=383
+EVENT type=high_first_run pid=3 time=392 latency_ms=9
+EVENT type=low_finish pid=2 time=633 work_units=10753
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=383 high_start_ms=392 low_finish_ms=633 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=384
+EVENT type=high_first_run pid=3 time=393 latency_ms=9
+EVENT type=low_finish pid=2 time=634 work_units=10641
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=384 high_start_ms=393 low_finish_ms=634 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=384
+EVENT type=high_first_run pid=3 time=393 latency_ms=9
+EVENT type=low_finish pid=2 time=634 work_units=10714
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=384 high_start_ms=393 low_finish_ms=634 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=383
+EVENT type=high_first_run pid=3 time=392 latency_ms=9
+EVENT type=low_finish pid=2 time=633 work_units=10752
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=383 high_start_ms=392 low_finish_ms=633 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=384
+EVENT type=high_first_run pid=3 time=392 latency_ms=8
+EVENT type=low_finish pid=2 time=634 work_units=10968
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=384 high_start_ms=392 low_finish_ms=634 latency_ms=8
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=384
+EVENT type=high_first_run pid=3 time=393 latency_ms=9
+EVENT type=low_finish pid=2 time=634 work_units=10821
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=384 high_start_ms=393 low_finish_ms=634 latency_ms=9
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=385
+EVENT type=high_first_run pid=3 time=393 latency_ms=8
+EVENT type=low_finish pid=2 time=635 work_units=10996
+SCHED_STATS timer=25 schedule=14 switch=14 fetch=14 scan=368 ts_preempt=12 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=385 high_start_ms=393 low_finish_ms=635 latency_ms=8
+PASS name=rms_preempt_strict
+TEST name=rms_preempt_strict phase=start
+EVENT type=high_ready_base time=385
+EVENT type=high_first_run pid=3 time=393 latency_ms=8
+EVENT type=low_finish pid=2 time=635 work_units=10802
+SCHED_STATS timer=24 schedule=13 switch=13 fetch=13 scan=340 ts_preempt=11 prio_preempt=1 wait_block=0 wakeup=0
+RESULT create_time_ms=385 high_start_ms=393 low_finish_ms=635 latency_ms=8
+PASS name=rms_preempt_strict
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=21
+EVENT type=worker_start pid=4 time=34
+EVENT type=worker_start pid=5 time=54
+RESULT type=worker pid=3 work_units=14279 elapsed_ms=1024
+RESULT type=worker pid=4 work_units=14567 elapsed_ms=1012
+RESULT type=worker pid=5 work_units=14874 elapsed_ms=1001
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=382
+EVENT type=worker_start pid=4 time=401
+EVENT type=worker_start pid=5 time=421
+RESULT type=worker pid=3 work_units=14940 elapsed_ms=1031
+RESULT type=worker pid=4 work_units=14854 elapsed_ms=1012
+RESULT type=worker pid=5 work_units=15129 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=382
+EVENT type=worker_start pid=4 time=400
+EVENT type=worker_start pid=5 time=421
+RESULT type=worker pid=3 work_units=14939 elapsed_ms=1032
+RESULT type=worker pid=4 work_units=14529 elapsed_ms=1015
+RESULT type=worker pid=5 work_units=15108 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=384
+EVENT type=worker_start pid=4 time=402
+EVENT type=worker_start pid=5 time=422
+RESULT type=worker pid=3 work_units=15023 elapsed_ms=1030
+RESULT type=worker pid=4 work_units=14991 elapsed_ms=1013
+RESULT type=worker pid=5 work_units=15198 elapsed_ms=1001
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=382
+EVENT type=worker_start pid=4 time=401
+EVENT type=worker_start pid=5 time=421
+RESULT type=worker pid=3 work_units=14919 elapsed_ms=1030
+RESULT type=worker pid=4 work_units=14795 elapsed_ms=1012
+RESULT type=worker pid=5 work_units=14930 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=383
+EVENT type=worker_start pid=4 time=402
+EVENT type=worker_start pid=5 time=422
+RESULT type=worker pid=3 work_units=14303 elapsed_ms=1028
+RESULT type=worker pid=4 work_units=14290 elapsed_ms=1009
+RESULT type=worker pid=5 work_units=14575 elapsed_ms=1000
+SCHED_STATS timer=103 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=384
+EVENT type=worker_start pid=4 time=403
+EVENT type=worker_start pid=5 time=423
+RESULT type=worker pid=3 work_units=14965 elapsed_ms=1029
+RESULT type=worker pid=4 work_units=15016 elapsed_ms=1011
+RESULT type=worker pid=5 work_units=15374 elapsed_ms=1000
+SCHED_STATS timer=103 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=383
+EVENT type=worker_start pid=4 time=402
+EVENT type=worker_start pid=5 time=422
+RESULT type=worker pid=3 work_units=15079 elapsed_ms=1032
+RESULT type=worker pid=4 work_units=15010 elapsed_ms=1014
+RESULT type=worker pid=5 work_units=15265 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=382
+EVENT type=worker_start pid=4 time=401
+EVENT type=worker_start pid=5 time=421
+RESULT type=worker pid=3 work_units=14841 elapsed_ms=1031
+RESULT type=worker pid=4 work_units=14926 elapsed_ms=1012
+RESULT type=worker pid=5 work_units=15150 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_rr_fairness phase=start
+EVENT type=worker_start pid=3 time=385
+EVENT type=worker_start pid=4 time=404
+EVENT type=worker_start pid=5 time=424
+RESULT type=worker pid=3 work_units=14817 elapsed_ms=1030
+RESULT type=worker pid=4 work_units=14884 elapsed_ms=1012
+RESULT type=worker pid=5 work_units=15229 elapsed_ms=1000
+SCHED_STATS timer=102 schedule=57 switch=57 fetch=57 scan=705 ts_preempt=51 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=18 remaining=2
+EVENT type=slice pid=3 time=21 remaining=1
+EVENT type=slice pid=4 time=31 remaining=2
+EVENT type=slice pid=4 time=41 remaining=1
+EVENT type=slice pid=3 time=51 remaining=2
+EVENT type=slice pid=3 time=61 remaining=1
+EVENT type=slice pid=4 time=72 remaining=2
+EVENT type=slice pid=4 time=82 remaining=1
+EVENT type=slice pid=3 time=92 remaining=2
+EVENT type=slice pid=3 time=103 remaining=1
+EVENT type=slice pid=4 time=113 remaining=2
+EVENT type=slice pid=4 time=124 remaining=1
+EVENT type=slice pid=3 time=134 remaining=2
+EVENT type=slice pid=3 time=144 remaining=1
+EVENT type=slice pid=4 time=154 remaining=2
+EVENT type=slice pid=4 time=164 remaining=1
+EVENT type=slice pid=3 time=174 remaining=2
+EVENT type=slice pid=3 time=184 remaining=1
+EVENT type=slice pid=4 time=194 remaining=2
+EVENT type=slice pid=4 time=205 remaining=1
+EVENT type=slice pid=3 time=215 remaining=2
+EVENT type=slice pid=3 time=225 remaining=1
+EVENT type=slice pid=4 time=235 remaining=2
+EVENT type=slice pid=4 time=246 remaining=1
+EVENT type=slice pid=3 time=256 remaining=2
+EVENT type=slice pid=3 time=266 remaining=1
+RESULT type=worker_done pid=3 checksum=9774823091321884663
+EVENT type=slice pid=4 time=269 remaining=2
+EVENT type=slice pid=4 time=276 remaining=1
+RESULT type=worker_done pid=4 checksum=12569062813373139194
+SCHED_STATS timer=26 schedule=16 switch=16 fetch=16 scan=184 ts_preempt=12 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=385 remaining=2
+EVENT type=slice pid=3 time=393 remaining=1
+EVENT type=slice pid=4 time=403 remaining=2
+EVENT type=slice pid=4 time=413 remaining=1
+EVENT type=slice pid=3 time=423 remaining=2
+EVENT type=slice pid=3 time=433 remaining=1
+EVENT type=slice pid=4 time=444 remaining=2
+EVENT type=slice pid=4 time=454 remaining=1
+EVENT type=slice pid=3 time=464 remaining=2
+EVENT type=slice pid=3 time=474 remaining=1
+EVENT type=slice pid=4 time=484 remaining=2
+EVENT type=slice pid=4 time=494 remaining=1
+EVENT type=slice pid=3 time=505 remaining=2
+EVENT type=slice pid=3 time=515 remaining=1
+EVENT type=slice pid=4 time=525 remaining=2
+EVENT type=slice pid=4 time=535 remaining=1
+EVENT type=slice pid=3 time=545 remaining=2
+EVENT type=slice pid=3 time=555 remaining=1
+EVENT type=slice pid=4 time=565 remaining=2
+EVENT type=slice pid=4 time=575 remaining=1
+EVENT type=slice pid=3 time=585 remaining=2
+EVENT type=slice pid=3 time=595 remaining=1
+EVENT type=slice pid=4 time=606 remaining=2
+EVENT type=slice pid=4 time=616 remaining=1
+EVENT type=slice pid=3 time=626 remaining=2
+RESULT type=worker_done pid=3 checksum=2252153161149980193
+EVENT type=slice pid=4 time=636 remaining=2
+EVENT type=slice pid=4 time=636 remaining=1
+EVENT type=slice pid=4 time=646 remaining=2
+RESULT type=worker_done pid=4 checksum=602148555456981954
+SCHED_STATS timer=26 schedule=17 switch=17 fetch=17 scan=197 ts_preempt=13 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=384 remaining=2
+EVENT type=slice pid=3 time=392 remaining=1
+EVENT type=slice pid=4 time=403 remaining=2
+EVENT type=slice pid=4 time=413 remaining=1
+EVENT type=slice pid=3 time=423 remaining=2
+EVENT type=slice pid=3 time=433 remaining=1
+EVENT type=slice pid=4 time=443 remaining=2
+EVENT type=slice pid=4 time=453 remaining=1
+EVENT type=slice pid=3 time=463 remaining=2
+EVENT type=slice pid=3 time=474 remaining=1
+EVENT type=slice pid=4 time=484 remaining=2
+EVENT type=slice pid=4 time=494 remaining=1
+EVENT type=slice pid=3 time=504 remaining=2
+EVENT type=slice pid=3 time=515 remaining=1
+EVENT type=slice pid=4 time=525 remaining=2
+EVENT type=slice pid=4 time=535 remaining=1
+EVENT type=slice pid=3 time=545 remaining=2
+EVENT type=slice pid=3 time=555 remaining=1
+EVENT type=slice pid=4 time=566 remaining=2
+EVENT type=slice pid=4 time=576 remaining=1
+EVENT type=slice pid=3 time=586 remaining=2
+EVENT type=slice pid=3 time=596 remaining=1
+EVENT type=slice pid=4 time=606 remaining=2
+EVENT type=slice pid=4 time=616 remaining=1
+EVENT type=slice pid=3 time=626 remaining=2
+RESULT type=worker_done pid=3 checksum=8501637634701189788
+EVENT type=slice pid=4 time=635 remaining=2
+EVENT type=slice pid=4 time=636 remaining=1
+EVENT type=slice pid=4 time=647 remaining=2
+RESULT type=worker_done pid=4 checksum=1271915318189522489
+SCHED_STATS timer=26 schedule=17 switch=17 fetch=17 scan=197 ts_preempt=13 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=383 remaining=2
+EVENT type=slice pid=3 time=392 remaining=1
+EVENT type=slice pid=4 time=402 remaining=2
+EVENT type=slice pid=4 time=412 remaining=1
+EVENT type=slice pid=3 time=422 remaining=2
+EVENT type=slice pid=3 time=432 remaining=1
+EVENT type=slice pid=4 time=442 remaining=2
+EVENT type=slice pid=4 time=453 remaining=1
+EVENT type=slice pid=3 time=463 remaining=2
+EVENT type=slice pid=3 time=473 remaining=1
+EVENT type=slice pid=4 time=483 remaining=2
+EVENT type=slice pid=4 time=493 remaining=1
+EVENT type=slice pid=3 time=503 remaining=2
+EVENT type=slice pid=3 time=513 remaining=1
+EVENT type=slice pid=4 time=524 remaining=2
+EVENT type=slice pid=4 time=534 remaining=1
+EVENT type=slice pid=3 time=544 remaining=2
+EVENT type=slice pid=3 time=554 remaining=1
+EVENT type=slice pid=4 time=564 remaining=2
+EVENT type=slice pid=4 time=574 remaining=1
+EVENT type=slice pid=3 time=585 remaining=2
+EVENT type=slice pid=3 time=595 remaining=1
+EVENT type=slice pid=4 time=605 remaining=2
+EVENT type=slice pid=4 time=615 remaining=1
+EVENT type=slice pid=3 time=625 remaining=2
+RESULT type=worker_done pid=3 checksum=15323239666431527528
+EVENT type=slice pid=4 time=634 remaining=2
+EVENT type=slice pid=4 time=635 remaining=1
+EVENT type=slice pid=4 time=645 remaining=2
+RESULT type=worker_done pid=4 checksum=15070354921764156554
+SCHED_STATS timer=26 schedule=17 switch=17 fetch=17 scan=197 ts_preempt=13 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=384 remaining=2
+EVENT type=slice pid=3 time=392 remaining=1
+EVENT type=slice pid=4 time=403 remaining=2
+EVENT type=slice pid=4 time=412 remaining=1
+EVENT type=slice pid=3 time=423 remaining=2
+EVENT type=slice pid=3 time=433 remaining=1
+EVENT type=slice pid=4 time=443 remaining=2
+EVENT type=slice pid=4 time=453 remaining=1
+EVENT type=slice pid=3 time=463 remaining=2
+EVENT type=slice pid=3 time=473 remaining=1
+EVENT type=slice pid=4 time=483 remaining=2
+EVENT type=slice pid=4 time=494 remaining=1
+EVENT type=slice pid=3 time=504 remaining=2
+EVENT type=slice pid=3 time=514 remaining=1
+EVENT type=slice pid=4 time=524 remaining=2
+EVENT type=slice pid=4 time=534 remaining=1
+EVENT type=slice pid=3 time=545 remaining=2
+EVENT type=slice pid=3 time=555 remaining=1
+EVENT type=slice pid=4 time=565 remaining=2
+EVENT type=slice pid=4 time=575 remaining=1
+EVENT type=slice pid=3 time=585 remaining=2
+EVENT type=slice pid=3 time=595 remaining=1
+EVENT type=slice pid=4 time=605 remaining=2
+EVENT type=slice pid=4 time=616 remaining=1
+EVENT type=slice pid=3 time=626 remaining=2
+RESULT type=worker_done pid=3 checksum=18321539530873446838
+EVENT type=slice pid=4 time=635 remaining=2
+EVENT type=slice pid=4 time=636 remaining=1
+EVENT type=slice pid=4 time=646 remaining=2
+RESULT type=worker_done pid=4 checksum=1223090715912816294
+SCHED_STATS timer=26 schedule=17 switch=17 fetch=17 scan=197 ts_preempt=13 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=393 checksum=2182815842122315366
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=682 checksum=15550326490700569486
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=9825038103438003226
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=30 schedule=124 switch=124 fetch=124 scan=124 ts_preempt=30 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=93 wait_yield=93
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=5353679838312718951
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=685 checksum=4199289963234030676
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=2354919413171917141
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=680 checksum=17399585272575330706
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=685 checksum=4935743153253599296
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=4381570169725037941
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=681 checksum=12969502750618887331
+RESULT waited_pid=3 exit_code=37 elapsed_ms=300
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=319 checksum=8600603271353826076
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=30 schedule=17 switch=17 fetch=17 scan=17 ts_preempt=15 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=682 checksum=682932539015592481
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=683 checksum=2354919413171917141
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=13542994388759148031
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=8493256253680955371
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=681 checksum=8573477846127849736
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=10403417973390911611
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=683 checksum=9052317469022164411
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=683 checksum=12721459809678505036
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=17000967242127910396
+RESULT waited_pid=3 exit_code=37 elapsed_ms=302
+SCHED_STATS timer=29 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=14 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=waitpid_common
+TEST name=rms_waitpid_block phase=start
+EVENT type=parent_wait pid=2 child=3 time=19
+EVENT type=child_start pid=3 time=20
+EVENT type=child_exit pid=3 time=321 checksum=13691497082640936616
+RESULT waited_pid=3 exit_code=37 elapsed_ms=302
+SCHED_STATS timer=30 schedule=17 switch=17 fetch=17 scan=449 ts_preempt=15 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=rms_waitpid_block
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=12 schedule=37 switch=37 fetch=37 scan=37 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+RESULT type=worker tasks=4 pid=4 checksum=RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=23 schedule=50 switch=50 fetch=50 scan=50 ts_preempt=23 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=527
+SCHED_STATS timer=52 schedule=87 switch=87 fetch=87 scan=87 ts_preempt=52 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=27 wait_yield=27
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=125
+SCHED_STATS timer=13 schedule=39 switch=39 fetch=39 scan=39 ts_preempt=13 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=230
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=458
+SCHED_STATS timer=46 schedule=80 switch=80 fetch=80 scan=80 ts_preempt=46 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=26 wait_yield=26
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=8 elapsed_ms=461
+SCHED_STATS timer=46 schedule=80 switch=80 fetch=80 scan=80 ts_preempt=46 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=26 wait_yield=26
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=6 schedule=27 switch=27 fetch=27 scan=27 ts_preempt=6 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=20 wait_yield=20
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=11 schedule=34 switch=34 fetch=34 scan=34 ts_preempt=11 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=4 elapsed_ms=236
+SCHED_STATS timer=23 schedule=51 switch=51 fetch=51 scan=51 ts_preempt=23 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=8 elapsed_ms=456
+SCHED_STATS timer=45 schedule=77 switch=77 fetch=77 scan=77 ts_preempt=45 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=23 schedule=50 switch=50 fetch=50 scan=50 ts_preempt=23 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=8 elapsed_ms=463
+SCHED_STATS timer=45 schedule=77 switch=77 fetch=77 scan=77 ts_preempt=45 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=6 schedule=27 switch=27 fetch=27 scan=27 ts_preempt=6 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=20 wait_yield=20
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=11 schedule=34 switch=34 fetch=34 scan=34 ts_preempt=11 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=226
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=8 elapsed_ms=453
+SCHED_STATS timer=45 schedule=77 switch=77 fetch=77 scan=77 ts_preempt=45 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=113
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=452
+SCHED_STATS timer=44 schedule=73 switch=73 fetch=73 scan=73 ts_preempt=44 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=230
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=452
+SCHED_STATS timer=44 schedule=73 switch=73 fetch=73 scan=73 ts_preempt=44 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=22 schedule=47 switch=47 fetch=47 scan=47 ts_preempt=22 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=464
+SCHED_STATS timer=46 schedule=77 switch=77 fetch=77 scan=77 ts_preempt=46 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=12 schedule=37 switch=37 fetch=37 scan=37 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=232
+SCHED_STATS timer=23 schedule=51 switch=51 fetch=51 scan=51 ts_preempt=23 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=458
+SCHED_STATS timer=45 schedule=74 switch=74 fetch=74 scan=74 ts_preempt=45 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=21 wait_yield=21
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=62
+SCHED_STATS timer=6 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=6 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=116
+SCHED_STATS timer=11 schedule=14 switch=14 fetch=14 scan=14 ts_preempt=11 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=23 schedule=28 switch=28 fetch=28 scan=28 ts_preempt=23 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=case tasks=8 elapsed_ms=468
+SCHED_STATS timer=46 schedule=56 switch=56 fetch=56 scan=56 ts_preempt=46 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=59
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=11 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=11 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=233
+SCHED_STATS timer=23 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=23 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=8 elapsed_ms=458
+SCHED_STATS timer=45 schedule=55 switch=55 fetch=55 scan=55 ts_preempt=45 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=11 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=11 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=230
+SCHED_STATS timer=23 schedule=30 switch=30 fetch=30 scan=30 ts_preempt=23 prio_preempt=0 wait_block=3 wakeup=3
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=472
+SCHED_STATS timer=46 schedule=56 switch=56 fetch=56 scan=56 ts_preempt=46 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=62
+SCHED_STATS timer=6 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=6 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=118
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=22 schedule=28 switch=28 fetch=28 scan=28 ts_preempt=22 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=case tasks=8 elapsed_ms=459
+SCHED_STATS timer=46 schedule=58 switch=58 fetch=58 scan=58 ts_preempt=46 prio_preempt=0 wait_block=4 wakeup=4
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=113
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=22 schedule=28 switch=28 fetch=28 scan=28 ts_preempt=22 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=469
+SCHED_STATS timer=47 schedule=58 switch=58 fetch=58 scan=58 ts_preempt=47 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=116
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=227
+SCHED_STATS timer=22 schedule=27 switch=27 fetch=27 scan=27 ts_preempt=22 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=case tasks=8 elapsed_ms=459
+SCHED_STATS timer=46 schedule=58 switch=58 fetch=58 scan=58 ts_preempt=46 prio_preempt=0 wait_block=4 wakeup=4
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=22 schedule=28 switch=28 fetch=28 scan=28 ts_preempt=22 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=case tasks=8 elapsed_ms=465
+SCHED_STATS timer=46 schedule=58 switch=58 fetch=58 scan=58 ts_preempt=46 prio_preempt=0 wait_block=4 wakeup=4
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=59
+SCHED_STATS timer=6 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=6 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=116
+SCHED_STATS timer=11 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=11 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=23 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=23 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=452
+SCHED_STATS timer=44 schedule=54 switch=54 fetch=54 scan=54 ts_preempt=44 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=113
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=22 schedule=28 switch=28 fetch=28 scan=28 ts_preempt=22 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=8 elapsed_ms=456
+SCHED_STATS timer=45 schedule=55 switch=55 fetch=55 scan=55 ts_preempt=45 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=7 switch=7 fetch=7 scan=7 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=119
+SCHED_STATS timer=12 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=12 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=23 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=23 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=case tasks=8 elapsed_ms=455
+SCHED_STATS timer=45 schedule=55 switch=55 fetch=55 scan=55 ts_preempt=45 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=60
+SCHED_STATS timer=6 schedule=5 switch=5 fetch=5 scan=5 ts_preempt=3 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=117
+SCHED_STATS timer=11 schedule=9 switch=9 fetch=9 scan=9 ts_preempt=5 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=230
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=471
+SCHED_STATS timer=47 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=22 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=10 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=460
+SCHED_STATS timer=46 schedule=30 switch=30 fetch=30 scan=30 ts_preempt=20 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=62
+SCHED_STATS timer=6 schedule=5 switch=5 fetch=5 scan=5 ts_preempt=3 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=113
+SCHED_STATS timer=11 schedule=9 switch=9 fetch=9 scan=9 ts_preempt=5 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=462
+SCHED_STATS timer=46 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=113
+SCHED_STATS timer=12 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=227
+SCHED_STATS timer=22 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=10 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=458
+SCHED_STATS timer=46 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=64
+SCHED_STATS timer=6 schedule=5 switch=5 fetch=5 scan=5 ts_preempt=3 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=112
+SCHED_STATS timer=11 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=466
+SCHED_STATS timer=46 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=230
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=case tasks=8 elapsed_ms=459
+SCHED_STATS timer=45 schedule=30 switch=30 fetch=30 scan=30 ts_preempt=20 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=12 schedule=9 switch=9 fetch=9 scan=9 ts_preempt=5 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=228
+SCHED_STATS timer=22 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=10 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=459
+SCHED_STATS timer=46 schedule=32 switch=32 fetch=32 scan=32 ts_preempt=21 prio_preempt=0 wait_block=3 wakeup=3
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=112
+SCHED_STATS timer=11 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=229
+SCHED_STATS timer=23 schedule=16 switch=16 fetch=16 scan=16 ts_preempt=10 prio_preempt=0 wait_block=2 wakeup=2
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=461
+SCHED_STATS timer=46 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=56
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=111
+SCHED_STATS timer=11 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=226
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=458
+SCHED_STATS timer=45 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=58
+SCHED_STATS timer=5 schedule=4 switch=4 fetch=4 scan=4 ts_preempt=2 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=114
+SCHED_STATS timer=12 schedule=8 switch=8 fetch=8 scan=8 ts_preempt=5 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=case tasks=4 elapsed_ms=232
+SCHED_STATS timer=23 schedule=15 switch=15 fetch=15 scan=15 ts_preempt=10 prio_preempt=0 wait_block=1 wakeup=1
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=case tasks=8 elapsed_ms=461
+SCHED_STATS timer=45 schedule=29 switch=29 fetch=29 scan=29 ts_preempt=20 prio_preempt=0 wait_block=1 wakeup=1
+PASS name=sched_common_workload
+TEST name=rms_regression phase=start rounds=200
+DATA completed_rounds=25
+DATA completed_rounds=50
+DATA completed_rounds=75
+DATA completed_rounds=100
+DATA completed_rounds=125
+DATA completed_rounds=150
+DATA completed_rounds=175
+DATA completed_rounds=200
+PASS name=rms_regression rounds=200

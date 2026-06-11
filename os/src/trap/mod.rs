@@ -16,6 +16,7 @@ mod context;
 
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::syscall;
+use crate::task::stats;
 use crate::task::{
     current_task_time_slice_exhausted, current_trap_cx, current_user_token,
     exit_current_and_run_next, should_preempt_current, suspend_current_and_run_next,
@@ -90,9 +91,13 @@ pub fn trap_handler() -> ! {
             exit_current_and_run_next(-3);
         }
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
+            stats::inc_timer_interrupts();
             set_next_trigger();
             let time_slice_exhausted = current_task_time_slice_exhausted();
             let priority_preempted = should_preempt_current();
+            if time_slice_exhausted {
+                stats::inc_timeslice_preemptions();
+            }
             if time_slice_exhausted || priority_preempted {
                 suspend_current_and_run_next();
             }

@@ -24,6 +24,7 @@ OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
 # Disassembly
 DISASM ?= -x
+CARGO_FEATURES ?=
 
 # Run usertests or usershell
 TEST ?=
@@ -43,7 +44,7 @@ kernel:
 	@cd ../user && make build TEST=$(TEST)
 	@echo Platform: $(BOARD)
 	@cp src/linker-$(BOARD).ld src/linker.ld
-	@cargo build --release
+	@cargo build --release $(if $(CARGO_FEATURES),--features $(CARGO_FEATURES))
 	@rm src/linker.ld
 
 clean:

@@ -1,0 +1,209 @@
+diff --git a/os/src/syscall/mod.rs b/os/src/syscall/mod.rs
+index be8005d1..b9c1d512 100644
+--- a/os/src/syscall/mod.rs
++++ b/os/src/syscall/mod.rs
+@@ -18,6 +18,8 @@ const SYSCALL_GETPID: usize = 172;
+ const SYSCALL_FORK: usize = 220;
+ const SYSCALL_EXEC: usize = 221;
+ const SYSCALL_WAITPID: usize = 260;
++const SYSCALL_SCHED_STATS_RESET: usize = 266;
++const SYSCALL_SCHED_STATS_DUMP: usize = 267;
+ 
+ mod fs;
+ mod process;
+@@ -36,6 +38,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+         SYSCALL_FORK => sys_fork(),
+         SYSCALL_EXEC => sys_exec(args[0] as *const u8),
+         SYSCALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut i32),
++        SYSCALL_SCHED_STATS_RESET => sys_sched_stats_reset(),
++        SYSCALL_SCHED_STATS_DUMP => sys_sched_stats_dump(),
+         _ => panic!("Unsupported syscall_id: {}", syscall_id),
+     }
+ }
+diff --git a/os/src/syscall/process.rs b/os/src/syscall/process.rs
+index 6850fd27..3e9d7aaf 100644
+--- a/os/src/syscall/process.rs
++++ b/os/src/syscall/process.rs
+@@ -1,8 +1,9 @@
+ use crate::loader::get_app_data_by_name;
+ use crate::mm::{translated_refmut, translated_str};
++use crate::task::stats;
+ use crate::task::{
+-    add_task, current_task, current_user_token, exit_current_and_run_next,
+-    suspend_current_and_run_next,
++    add_task, current_task, current_user_token, exit_current_and_run_next, reset_sched_stats,
++    sched_stats_snapshot, suspend_current_and_run_next,
+ };
+ use crate::timer::get_time_ms;
+ use alloc::sync::Arc;
+@@ -13,6 +14,7 @@ pub fn sys_exit(exit_code: i32) -> ! {
+ }
+ 
+ pub fn sys_yield() -> isize {
++    stats::inc_yield_calls_during_wait();
+     suspend_current_and_run_next();
+     0
+ }
+@@ -83,7 +85,32 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut i32) -> isize {
+         *translated_refmut(inner.memory_set.token(), exit_code_ptr) = exit_code;
+         found_pid as isize
+     } else {
++        stats::inc_waitpid_not_ready_returns();
+         -2
+     }
+     // ---- release current PCB lock automatically
+ }
++
++pub fn sys_sched_stats_reset() -> isize {
++    reset_sched_stats();
++    0
++}
++
++pub fn sys_sched_stats_dump() -> isize {
++    let stats = sched_stats_snapshot();
++    println!(
++        "SCHED_STATS timer={} schedule={} switch={} fetch={} scan={} ts_preempt={} prio_preempt={} wait_block={} wakeup={} wait_not_ready={} wait_yield={}",
++        stats.timer_interrupts,
++        stats.schedule_calls,
++        stats.context_switches,
++        stats.fetch_calls,
++        stats.queue_levels_scanned,
++        stats.timer_interrupts,
++        0,
++        0,
++        0,
++        stats.waitpid_not_ready_returns,
++        stats.yield_calls_during_wait,
++    );
++    0
++}
+diff --git a/os/src/task/manager.rs b/os/src/task/manager.rs
+index 315cd224..92232536 100644
+--- a/os/src/task/manager.rs
++++ b/os/src/task/manager.rs
+@@ -1,5 +1,5 @@
+ //!Implementation of [`TaskManager`]
+-use super::TaskControlBlock;
++use super::{TaskControlBlock, stats};
+ use crate::sync::UPSafeCell;
+ use alloc::collections::VecDeque;
+ use alloc::sync::Arc;
+@@ -23,6 +23,7 @@ impl TaskManager {
+     }
+     ///Remove the first task and return it,or `None` if `TaskManager` is empty
+     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
++        stats::inc_fetch_calls();
+         self.ready_queue.pop_front()
+     }
+ }
+diff --git a/os/src/task/mod.rs b/os/src/task/mod.rs
+index b0b13214..ea8d7dd8 100644
+--- a/os/src/task/mod.rs
++++ b/os/src/task/mod.rs
+@@ -18,6 +18,7 @@ mod context;
+ mod manager;
+ mod pid;
+ mod processor;
++pub(crate) mod stats;
+ mod switch;
+ #[allow(clippy::module_inception)]
+ mod task;
+@@ -37,6 +38,7 @@ pub use processor::{
+     Processor, current_task, current_trap_cx, current_user_token, run_tasks, schedule,
+     take_current_task,
+ };
++pub use stats::{reset as reset_sched_stats, snapshot as sched_stats_snapshot};
+ /// Suspend the current 'Running' task and run the next task in task list.
+ pub fn suspend_current_and_run_next() {
+     // There must be an application running.
+diff --git a/os/src/task/processor.rs b/os/src/task/processor.rs
+index 7c05a215..ef6b20bb 100644
+--- a/os/src/task/processor.rs
++++ b/os/src/task/processor.rs
+@@ -1,7 +1,7 @@
+ //!Implementation of [`Processor`] and Intersection of control flow
+ use super::__switch;
+ use super::{TaskContext, TaskControlBlock};
+-use super::{TaskStatus, fetch_task};
++use super::{TaskStatus, fetch_task, stats};
+ use crate::sync::UPSafeCell;
+ use crate::trap::TrapContext;
+ use alloc::sync::Arc;
+@@ -45,6 +45,7 @@ pub fn run_tasks() {
+     loop {
+         let mut processor = PROCESSOR.exclusive_access();
+         if let Some(task) = fetch_task() {
++            stats::inc_context_switches();
+             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+             // access coming task TCB exclusively
+             let mut task_inner = task.inner_exclusive_access();
+@@ -84,6 +85,7 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
+ }
+ ///Return to idle control flow for new scheduling
+ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
++    stats::inc_schedule_calls();
+     let mut processor = PROCESSOR.exclusive_access();
+     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+     drop(processor);
+diff --git a/os/src/trap/mod.rs b/os/src/trap/mod.rs
+index e05bcc07..5c1700bb 100644
+--- a/os/src/trap/mod.rs
++++ b/os/src/trap/mod.rs
+@@ -15,6 +15,7 @@ mod context;
+ 
+ use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+ use crate::syscall::syscall;
++use crate::task::stats;
+ use crate::task::{
+     current_trap_cx, current_user_token, exit_current_and_run_next, suspend_current_and_run_next,
+ };
+@@ -88,6 +89,7 @@ pub fn trap_handler() -> ! {
+             exit_current_and_run_next(-3);
+         }
+         Trap::Interrupt(Interrupt::SupervisorTimer) => {
++            stats::inc_timer_interrupts();
+             set_next_trigger();
+             suspend_current_and_run_next();
+         }
+diff --git a/user/src/lib.rs b/user/src/lib.rs
+index dc8c959f..8baaf5e8 100644
+--- a/user/src/lib.rs
++++ b/user/src/lib.rs
+@@ -60,6 +60,12 @@ pub fn getpid() -> isize {
+ pub fn fork() -> isize {
+     sys_fork()
+ }
++pub fn sched_stats_reset() -> isize {
++    sys_sched_stats_reset()
++}
++pub fn sched_stats_dump() -> isize {
++    sys_sched_stats_dump()
++}
+ pub fn exec(path: &str) -> isize {
+     sys_exec(path)
+ }
+diff --git a/user/src/syscall.rs b/user/src/syscall.rs
+index a37fadb3..4c8f9078 100644
+--- a/user/src/syscall.rs
++++ b/user/src/syscall.rs
+@@ -9,6 +9,8 @@ const SYSCALL_GETPID: usize = 172;
+ const SYSCALL_FORK: usize = 220;
+ const SYSCALL_EXEC: usize = 221;
+ const SYSCALL_WAITPID: usize = 260;
++const SYSCALL_SCHED_STATS_RESET: usize = 266;
++const SYSCALL_SCHED_STATS_DUMP: usize = 267;
+ 
+ fn syscall(id: usize, args: [usize; 3]) -> isize {
+     let mut ret: isize;
+@@ -63,3 +65,11 @@ pub fn sys_exec(path: &str) -> isize {
+ pub fn sys_waitpid(pid: isize, exit_code: *mut i32) -> isize {
+     syscall(SYSCALL_WAITPID, [pid as usize, exit_code as usize, 0])
+ }
++
++pub fn sys_sched_stats_reset() -> isize {
++    syscall(SYSCALL_SCHED_STATS_RESET, [0, 0, 0])
++}
++
++pub fn sys_sched_stats_dump() -> isize {
++    syscall(SYSCALL_SCHED_STATS_DUMP, [0, 0, 0])
++}

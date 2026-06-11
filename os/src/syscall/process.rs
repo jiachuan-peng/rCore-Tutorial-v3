@@ -1,8 +1,9 @@
 use crate::loader::get_app_data_by_name;
 use crate::mm::{translated_refmut, translated_str};
 use crate::task::{
-    add_task, block_current_and_run_next, current_task, current_user_token,
-    exit_current_and_run_next, period_to_priority, suspend_current_and_run_next,
+    MAX_PERIOD_TICKS, MIN_PERIOD_TICKS, add_task, block_current_and_run_next, current_task,
+    current_user_token, exit_current_and_run_next, period_to_priority, reset_sched_stats,
+    sched_stats_snapshot, suspend_current_and_run_next,
 };
 use crate::timer::get_time_ms;
 use alloc::sync::Arc;
@@ -39,6 +40,25 @@ pub fn sys_fork() -> isize {
     new_pid as isize
 }
 
+/// Fork a child and assign its RMS parameters before it enters a ready queue.
+pub fn sys_fork_with_period(period_ticks: usize) -> isize {
+    if !(MIN_PERIOD_TICKS..=MAX_PERIOD_TICKS).contains(&period_ticks) {
+        return -1;
+    }
+    let current_task = current_task().unwrap();
+    let new_task = current_task.fork();
+    let new_pid = new_task.pid.0;
+    {
+        let mut inner = new_task.inner_exclusive_access();
+        inner.period_ticks = period_ticks;
+        inner.priority = period_to_priority(period_ticks);
+        inner.remaining_slice = inner.time_slice;
+        inner.get_trap_cx().x[10] = 0;
+    }
+    add_task(new_task);
+    new_pid as isize
+}
+
 pub fn sys_exec(path: *const u8) -> isize {
     let token = current_user_token();
     let path = translated_str(token, path);
@@ -53,9 +73,9 @@ pub fn sys_exec(path: *const u8) -> isize {
 
 /// Set RMS period for the current task (ticks); recomputes static priority.
 ///
-/// Rejects `period_ticks == 0` with `-1` (ambiguous / unsafe vs RMS mapping).
+/// Rejects values outside the documented `1..=1024` experiment range.
 pub fn sys_set_period(period_ticks: usize) -> isize {
-    if period_ticks == 0 {
+    if !(MIN_PERIOD_TICKS..=MAX_PERIOD_TICKS).contains(&period_ticks) {
         return -1;
     }
     let Some(task) = current_task() else {
@@ -65,6 +85,28 @@ pub fn sys_set_period(period_ticks: usize) -> isize {
     inner.period_ticks = period_ticks;
     inner.priority = period_to_priority(period_ticks);
     inner.remaining_slice = inner.time_slice;
+    0
+}
+
+pub fn sys_sched_stats_reset() -> isize {
+    reset_sched_stats();
+    0
+}
+
+pub fn sys_sched_stats_dump() -> isize {
+    let stats = sched_stats_snapshot();
+    println!(
+        "SCHED_STATS timer={} schedule={} switch={} fetch={} scan={} ts_preempt={} prio_preempt={} wait_block={} wakeup={}",
+        stats.timer_interrupts,
+        stats.schedule_calls,
+        stats.context_switches,
+        stats.fetch_calls,
+        stats.queue_levels_scanned,
+        stats.timeslice_preemptions,
+        stats.priority_preemptions,
+        stats.waitpid_blocks,
+        stats.task_wakeups,
+    );
     0
 }
 

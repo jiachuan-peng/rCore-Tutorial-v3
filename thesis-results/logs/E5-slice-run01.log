@@ -1,0 +1,122 @@
+make: Entering directory '/home/siyun/rCore-Tutorial-v3/os'
+[0;32mQEMU version is 8.2.2(>=7), OK![0m
+(rustup target list | grep "riscv64gc-unknown-none-elf (installed)") || rustup target add riscv64gc-unknown-none-elf
+riscv64gc-unknown-none-elf (installed)
+cargo install cargo-binutils
+    Updating crates.io index
+     Ignored package `cargo-binutils v0.4.0` is already installed, use --force to override
+rustup component add rust-src
+info: component 'rust-src' is up to date
+rustup component add llvm-tools-preview
+info: component 'llvm-tools' for target 'x86_64-unknown-linux-gnu' is up to date
+make[1]: Entering directory '/home/siyun/rCore-Tutorial-v3/user'
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.00s
+make[1]: Leaving directory '/home/siyun/rCore-Tutorial-v3/user'
+Platform: qemu
+   Compiling os v0.1.0 (/home/siyun/rCore-Tutorial-v3/os)
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.46s
+[rustsbi] RustSBI version 0.3.1, adapting to RISC-V SBI v1.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.2
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e010f6
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+[34m[ INFO] [kernel] Hello, world![0m
+last 31161 Physical Frames.
+.text [0x80200000, 0x80210000)
+.rodata [0x80210000, 0x80215000)
+.data [0x80215000, 0x80436000)
+.bss [0x80436000, 0x80647000)
+mapping .text section
+mapping .rodata section
+mapping .data section
+mapping .bss section
+mapping physical memory
+mapping memory-mapped registers
+remap_test passed!
+after initproc!
+/**** APPS ****
+exit
+fantastic_text
+forkexec
+forktest
+forktest2
+forktest_simple
+forktree
+hello_world
+initproc
+matrix
+rms_preempt
+rms_preempt_strict
+rms_priority_map
+rms_priority_order
+rms_ready_order
+rms_ready_queue
+rms_regression
+rms_remaining_slice
+rms_round_robin
+rms_rr_fairness
+rms_slice_trace
+rms_syscall_probe
+rms_waitpid_block
+rms_waitpid_regression
+sched_common_workload
+sleep
+sleep_simple
+stack_overflow
+user_shell
+usertests
+usertests-simple
+yield
+**************/
+Rust user shell
+>> rms_slice_trace
+TEST name=rms_slice_trace phase=start
+EVENT type=slice pid=3 time=18 remaining=2
+EVENT type=slice pid=3 time=21 remaining=1
+EVENT type=slice pid=4 time=31 remaining=2
+EVENT type=slice pid=4 time=41 remaining=1
+EVENT type=slice pid=3 time=51 remaining=2
+EVENT type=slice pid=3 time=61 remaining=1
+EVENT type=slice pid=4 time=72 remaining=2
+EVENT type=slice pid=4 time=82 remaining=1
+EVENT type=slice pid=3 time=92 remaining=2
+EVENT type=slice pid=3 time=103 remaining=1
+EVENT type=slice pid=4 time=113 remaining=2
+EVENT type=slice pid=4 time=124 remaining=1
+EVENT type=slice pid=3 time=134 remaining=2
+EVENT type=slice pid=3 time=144 remaining=1
+EVENT type=slice pid=4 time=154 remaining=2
+EVENT type=slice pid=4 time=164 remaining=1
+EVENT type=slice pid=3 time=174 remaining=2
+EVENT type=slice pid=3 time=184 remaining=1
+EVENT type=slice pid=4 time=194 remaining=2
+EVENT type=slice pid=4 time=205 remaining=1
+EVENT type=slice pid=3 time=215 remaining=2
+EVENT type=slice pid=3 time=225 remaining=1
+EVENT type=slice pid=4 time=235 remaining=2
+EVENT type=slice pid=4 time=246 remaining=1
+EVENT type=slice pid=3 time=256 remaining=2
+EVENT type=slice pid=3 time=266 remaining=1
+RESULT type=worker_done pid=3 checksum=9774823091321884663
+EVENT type=slice pid=4 time=269 remaining=2
+EVENT type=slice pid=4 time=276 remaining=1
+RESULT type=worker_done pid=4 checksum=12569062813373139194
+SCHED_STATS timer=26 schedule=16 switch=16 fetch=16 scan=184 ts_preempt=12 prio_preempt=0 wait_block=2 wakeup=2
+PASS name=rms_slice_trace
+Shell: Process 2 exited with code 0
+>> QEMU: Terminated
+make: Leaving directory '/home/siyun/rCore-Tutorial-v3/os'

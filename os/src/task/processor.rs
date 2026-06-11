@@ -1,7 +1,7 @@
 //!Implementation of [`Processor`] and Intersection of control flow
 use super::__switch;
+use super::{ENABLE_SCHED_TRACE, TaskStatus, fetch_task, stats};
 use super::{TaskContext, TaskControlBlock};
-use super::{ENABLE_SCHED_TRACE, TaskStatus, fetch_task};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
@@ -45,6 +45,7 @@ pub fn run_tasks() {
     loop {
         let mut processor = PROCESSOR.exclusive_access();
         if let Some(task) = fetch_task() {
+            stats::inc_context_switches();
             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
             // access coming task TCB exclusively
             let mut task_inner = task.inner_exclusive_access();
@@ -90,6 +91,7 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 }
 ///Return to idle control flow for new scheduling
 pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
+    stats::inc_schedule_calls();
     let mut processor = PROCESSOR.exclusive_access();
     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
     drop(processor);
@@ -97,5 +99,3 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
 }
-
-

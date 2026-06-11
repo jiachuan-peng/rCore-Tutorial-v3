@@ -1,0 +1,1742 @@
+diff --git a/os/Cargo.toml b/os/Cargo.toml
+index d99be730..b896004a 100644
+--- a/os/Cargo.toml
++++ b/os/Cargo.toml
+@@ -17,3 +17,6 @@ sbi-rt = { version = "0.0.2", features = ["legacy"] }
+ 
+ [profile.release]
+ debug = true
++
++[features]
++timeslice-1 = []
+diff --git a/os/Makefile b/os/Makefile
+index 66a07c80..4cc2b7fa 100644
+--- a/os/Makefile
++++ b/os/Makefile
+@@ -24,6 +24,7 @@ OBJCOPY := rust-objcopy --binary-architecture=riscv64
+ 
+ # Disassembly
+ DISASM ?= -x
++CARGO_FEATURES ?=
+ 
+ # Run usertests or usershell
+ TEST ?=
+@@ -43,7 +44,7 @@ kernel:
+ 	@cd ../user && make build TEST=$(TEST)
+ 	@echo Platform: $(BOARD)
+ 	@cp src/linker-$(BOARD).ld src/linker.ld
+-	@cargo build --release
++	@cargo build --release $(if $(CARGO_FEATURES),--features $(CARGO_FEATURES))
+ 	@rm src/linker.ld
+ 
+ clean:
+diff --git a/os/src/syscall/mod.rs b/os/src/syscall/mod.rs
+index b79ee2b4..9707383b 100644
+--- a/os/src/syscall/mod.rs
++++ b/os/src/syscall/mod.rs
+@@ -22,6 +22,9 @@ const SYSCALL_SET_PERIOD: usize = 261;
+ const SYSCALL_GET_PRIORITY: usize = 262;
+ const SYSCALL_GET_PERIOD: usize = 263;
+ const SYSCALL_GET_REMAINING_SLICE: usize = 264;
++const SYSCALL_FORK_WITH_PERIOD: usize = 265;
++const SYSCALL_SCHED_STATS_RESET: usize = 266;
++const SYSCALL_SCHED_STATS_DUMP: usize = 267;
+ 
+ mod fs;
+ mod process;
+@@ -44,6 +47,9 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+         SYSCALL_GET_PRIORITY => sys_get_priority(),
+         SYSCALL_GET_PERIOD => sys_get_period(),
+         SYSCALL_GET_REMAINING_SLICE => sys_get_remaining_slice(),
++        SYSCALL_FORK_WITH_PERIOD => sys_fork_with_period(args[0]),
++        SYSCALL_SCHED_STATS_RESET => sys_sched_stats_reset(),
++        SYSCALL_SCHED_STATS_DUMP => sys_sched_stats_dump(),
+         _ => panic!("Unsupported syscall_id: {}", syscall_id),
+     }
+ }
+diff --git a/os/src/syscall/process.rs b/os/src/syscall/process.rs
+index 5df818fb..a13c54f2 100644
+--- a/os/src/syscall/process.rs
++++ b/os/src/syscall/process.rs
+@@ -1,8 +1,9 @@
+ use crate::loader::get_app_data_by_name;
+ use crate::mm::{translated_refmut, translated_str};
+ use crate::task::{
+-    add_task, block_current_and_run_next, current_task, current_user_token,
+-    exit_current_and_run_next, period_to_priority, suspend_current_and_run_next,
++    MAX_PERIOD_TICKS, MIN_PERIOD_TICKS, add_task, block_current_and_run_next, current_task,
++    current_user_token, exit_current_and_run_next, period_to_priority, reset_sched_stats,
++    sched_stats_snapshot, suspend_current_and_run_next,
+ };
+ use crate::timer::get_time_ms;
+ use alloc::sync::Arc;
+@@ -39,6 +40,25 @@ pub fn sys_fork() -> isize {
+     new_pid as isize
+ }
+ 
++/// Fork a child and assign its RMS parameters before it enters a ready queue.
++pub fn sys_fork_with_period(period_ticks: usize) -> isize {
++    if !(MIN_PERIOD_TICKS..=MAX_PERIOD_TICKS).contains(&period_ticks) {
++        return -1;
++    }
++    let current_task = current_task().unwrap();
++    let new_task = current_task.fork();
++    let new_pid = new_task.pid.0;
++    {
++        let mut inner = new_task.inner_exclusive_access();
++        inner.period_ticks = period_ticks;
++        inner.priority = period_to_priority(period_ticks);
++        inner.remaining_slice = inner.time_slice;
++        inner.get_trap_cx().x[10] = 0;
++    }
++    add_task(new_task);
++    new_pid as isize
++}
++
+ pub fn sys_exec(path: *const u8) -> isize {
+     let token = current_user_token();
+     let path = translated_str(token, path);
+@@ -53,9 +73,9 @@ pub fn sys_exec(path: *const u8) -> isize {
+ 
+ /// Set RMS period for the current task (ticks); recomputes static priority.
+ ///
+-/// Rejects `period_ticks == 0` with `-1` (ambiguous / unsafe vs RMS mapping).
++/// Rejects values outside the documented `1..=1024` experiment range.
+ pub fn sys_set_period(period_ticks: usize) -> isize {
+-    if period_ticks == 0 {
++    if !(MIN_PERIOD_TICKS..=MAX_PERIOD_TICKS).contains(&period_ticks) {
+         return -1;
+     }
+     let Some(task) = current_task() else {
+@@ -68,6 +88,28 @@ pub fn sys_set_period(period_ticks: usize) -> isize {
+     0
+ }
+ 
++pub fn sys_sched_stats_reset() -> isize {
++    reset_sched_stats();
++    0
++}
++
++pub fn sys_sched_stats_dump() -> isize {
++    let stats = sched_stats_snapshot();
++    println!(
++        "SCHED_STATS timer={} schedule={} switch={} fetch={} scan={} ts_preempt={} prio_preempt={} wait_block={} wakeup={}",
++        stats.timer_interrupts,
++        stats.schedule_calls,
++        stats.context_switches,
++        stats.fetch_calls,
++        stats.queue_levels_scanned,
++        stats.timeslice_preemptions,
++        stats.priority_preemptions,
++        stats.waitpid_blocks,
++        stats.task_wakeups,
++    );
++    0
++}
++
+ /// Current task RMS static priority, or `-1` if none.
+ pub fn sys_get_priority() -> isize {
+     current_task()
+diff --git a/os/src/task/manager.rs b/os/src/task/manager.rs
+index 75f018d1..7659fe5e 100644
+--- a/os/src/task/manager.rs
++++ b/os/src/task/manager.rs
+@@ -1,5 +1,7 @@
+ //!Implementation of [`TaskManager`]
+-use super::{ENABLE_SCHED_TRACE, LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus};
++use super::{
++    ENABLE_SCHED_TRACE, LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus, stats,
++};
+ use crate::sync::UPSafeCell;
+ use alloc::collections::VecDeque;
+ use alloc::sync::Arc;
+@@ -29,10 +31,7 @@ impl TaskManager {
+         for (p, q) in self.ready_queues.iter().enumerate() {
+             let n = q.len();
+             if n != 0 {
+-                println!(
+-                    "[TaskManager] ready_queues[{}] len = {}",
+-                    p, n
+-                );
++                println!("[TaskManager] ready_queues[{}] len = {}", p, n);
+             }
+         }
+     }
+@@ -54,9 +53,7 @@ impl TaskManager {
+             let inn = task.inner_exclusive_access();
+             println!(
+                 "[sched] enqueue pid={} prio={} period={}",
+-                pid,
+-                inn.priority,
+-                inn.period_ticks
++                pid, inn.priority, inn.period_ticks
+             );
+         }
+         self.ready_queues[queue_idx].push_back(task);
+@@ -65,6 +62,7 @@ impl TaskManager {
+     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
+         for priority in 0..MAX_PRIORITY {
+             if let Some(task) = self.ready_queues[priority].pop_front() {
++                stats::record_fetch(priority + 1);
+                 if ENABLE_SCHED_TRACE {
+                     let pid = task.getpid();
+                     let inn = task.inner_exclusive_access();
+@@ -73,6 +71,7 @@ impl TaskManager {
+                 return Some(task);
+             }
+         }
++        stats::record_fetch(MAX_PRIORITY);
+         None
+     }
+     /// Read-only check: any ready task strictly higher precedence than `current_priority`?
+diff --git a/os/src/task/mod.rs b/os/src/task/mod.rs
+index 7c504e03..dd9bb797 100644
+--- a/os/src/task/mod.rs
++++ b/os/src/task/mod.rs
+@@ -18,6 +18,7 @@ mod context;
+ mod manager;
+ mod pid;
+ mod processor;
++pub(crate) mod stats;
+ mod switch;
+ #[allow(clippy::module_inception)]
+ mod task;
+@@ -28,12 +29,11 @@ use alloc::sync::Arc;
+ use lazy_static::*;
+ pub use manager::{TaskManager, fetch_task};
+ use switch::__switch;
+-use task::{TaskControlBlock, TaskStatus};
+ pub use task::{
+-    period_to_priority,
+     DEFAULT_PERIOD_TICKS, DEFAULT_TIME_SLICE, HIGHEST_PRIORITY, LOWEST_PRIORITY, MAX_PERIOD_TICKS,
+-    MAX_PRIORITY, MIN_PERIOD_TICKS, WAITPID_NONE,
++    MAX_PRIORITY, MIN_PERIOD_TICKS, WAITPID_NONE, period_to_priority,
+ };
++use task::{TaskControlBlock, TaskStatus};
+ 
+ pub use context::TaskContext;
+ pub use manager::add_task;
+@@ -42,9 +42,14 @@ pub use processor::{
+     Processor, current_task, current_trap_cx, current_user_token, run_tasks, schedule,
+     take_current_task,
+ };
++pub use stats::{reset as reset_sched_stats, snapshot as sched_stats_snapshot};
+ 
+ /// When true, emit concise `[sched]` lines from the scheduler (default off for tests).
+ pub const ENABLE_SCHED_TRACE: bool = false;
++/// Enable lightweight scheduler counters used by experiment programs.
++pub const ENABLE_SCHED_STATS: bool = true;
++/// Emit per-tick slice transitions. Keep disabled except for short E5 traces.
++pub const ENABLE_VERBOSE_TICK_TRACE: bool = false;
+ 
+ /// Decrement the running task's time slice on a timer tick; returns true when the slice just ended.
+ pub fn current_task_time_slice_exhausted() -> bool {
+@@ -57,6 +62,13 @@ pub fn current_task_time_slice_exhausted() -> bool {
+             inner.remaining_slice -= 1;
+         }
+         let exhausted = inner.remaining_slice == 0;
++        if ENABLE_VERBOSE_TICK_TRACE {
++            println!(
++                "SLICE pid={} remaining={}",
++                task.getpid(),
++                inner.remaining_slice
++            );
++        }
+         if exhausted && ENABLE_SCHED_TRACE {
+             let pid = task.getpid();
+             let prio = inner.priority;
+@@ -88,6 +100,9 @@ pub fn should_preempt_current() -> bool {
+                 current_priority
+             );
+         }
++        if preempt {
++            stats::inc_priority_preemptions();
++        }
+         preempt
+     } else {
+         false
+@@ -139,6 +154,7 @@ pub fn block_current_and_run_next(waiting_pid: isize) {
+     task_inner.waiting_pid = waiting_pid;
+     drop(task_inner);
+ 
++    stats::inc_waitpid_blocks();
+     schedule(task_cx_ptr);
+ }
+ 
+@@ -202,6 +218,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
+             p_inner.task_status = TaskStatus::Ready;
+             p_inner.waiting_pid = WAITPID_NONE;
+             drop(p_inner);
++            stats::inc_task_wakeups();
+             add_task(parent_arc);
+         }
+     }
+diff --git a/os/src/task/processor.rs b/os/src/task/processor.rs
+index 4eb60f17..70e25651 100644
+--- a/os/src/task/processor.rs
++++ b/os/src/task/processor.rs
+@@ -1,7 +1,7 @@
+ //!Implementation of [`Processor`] and Intersection of control flow
+ use super::__switch;
++use super::{ENABLE_SCHED_TRACE, TaskStatus, fetch_task, stats};
+ use super::{TaskContext, TaskControlBlock};
+-use super::{ENABLE_SCHED_TRACE, TaskStatus, fetch_task};
+ use crate::sync::UPSafeCell;
+ use crate::trap::TrapContext;
+ use alloc::sync::Arc;
+@@ -45,6 +45,7 @@ pub fn run_tasks() {
+     loop {
+         let mut processor = PROCESSOR.exclusive_access();
+         if let Some(task) = fetch_task() {
++            stats::inc_context_switches();
+             let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+             // access coming task TCB exclusively
+             let mut task_inner = task.inner_exclusive_access();
+@@ -90,6 +91,7 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
+ }
+ ///Return to idle control flow for new scheduling
+ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
++    stats::inc_schedule_calls();
+     let mut processor = PROCESSOR.exclusive_access();
+     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+     drop(processor);
+@@ -97,5 +99,3 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
+         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
+     }
+ }
+-
+-
+diff --git a/os/src/task/task.rs b/os/src/task/task.rs
+index ba20f737..0c2c43c3 100644
+--- a/os/src/task/task.rs
++++ b/os/src/task/task.rs
+@@ -23,7 +23,11 @@ pub const MAX_PERIOD_TICKS: usize = 1024;
+ /// Default RMS period for a newly created task, in timer ticks.
+ pub const DEFAULT_PERIOD_TICKS: usize = 1;
+ /// Default length of one scheduling time slice, in timer ticks.
++#[cfg(not(feature = "timeslice-1"))]
+ pub const DEFAULT_TIME_SLICE: usize = 2;
++/// One-tick comparison configuration used only by the E7 experiment.
++#[cfg(feature = "timeslice-1")]
++pub const DEFAULT_TIME_SLICE: usize = 1;
+ 
+ /// Sentinel for [`TaskControlBlockInner::waiting_pid`] when not blocked in `waitpid`.
+ pub const WAITPID_NONE: isize = -2;
+diff --git a/os/src/trap/mod.rs b/os/src/trap/mod.rs
+index caf0ab2a..55ce7d29 100644
+--- a/os/src/trap/mod.rs
++++ b/os/src/trap/mod.rs
+@@ -16,6 +16,7 @@ mod context;
+ 
+ use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+ use crate::syscall::syscall;
++use crate::task::stats;
+ use crate::task::{
+     current_task_time_slice_exhausted, current_trap_cx, current_user_token,
+     exit_current_and_run_next, should_preempt_current, suspend_current_and_run_next,
+@@ -90,9 +91,13 @@ pub fn trap_handler() -> ! {
+             exit_current_and_run_next(-3);
+         }
+         Trap::Interrupt(Interrupt::SupervisorTimer) => {
++            stats::inc_timer_interrupts();
+             set_next_trigger();
+             let time_slice_exhausted = current_task_time_slice_exhausted();
+             let priority_preempted = should_preempt_current();
++            if time_slice_exhausted {
++                stats::inc_timeslice_preemptions();
++            }
+             if time_slice_exhausted || priority_preempted {
+                 suspend_current_and_run_next();
+             }
+diff --git a/user/src/bin/rms_preempt.rs b/user/src/bin/rms_preempt.rs
+index 381fb063..b827cbf3 100644
+--- a/user/src/bin/rms_preempt.rs
++++ b/user/src/bin/rms_preempt.rs
+@@ -2,7 +2,6 @@
+ #![no_main]
+ 
+ #[macro_use]
+-
+ extern crate user_lib;
+ 
+ use user_lib::{exit, fork, getpid, set_period, waitpid, yield_};
+diff --git a/user/src/bin/rms_priority_order.rs b/user/src/bin/rms_priority_order.rs
+index 4bf969d8..140850f8 100644
+--- a/user/src/bin/rms_priority_order.rs
++++ b/user/src/bin/rms_priority_order.rs
+@@ -30,7 +30,7 @@ pub fn main() -> i32 {
+                 per,
+                 prio
+             );
+-            
++
+             exit(0);
+         }
+         pids[i] = p;
+diff --git a/user/src/bin/rms_ready_queue.rs b/user/src/bin/rms_ready_queue.rs
+index ff2305ef..a2f15075 100644
+--- a/user/src/bin/rms_ready_queue.rs
++++ b/user/src/bin/rms_ready_queue.rs
+@@ -4,7 +4,9 @@
+ #[macro_use]
+ extern crate user_lib;
+ 
+-use user_lib::{exit, fork, get_time, get_period, get_priority, getpid, set_period, waitpid, yield_};
++use user_lib::{
++    exit, fork, get_period, get_priority, get_time, getpid, set_period, waitpid, yield_,
++};
+ 
+ /// 用户态可运行自检（`make run` 后在 shell 里执行 `rms_ready_queue`）。
+ ///
+@@ -16,8 +18,6 @@ use user_lib::{exit, fork, get_time, get_period, get_priority, getpid, set_perio
+ pub fn main() -> i32 {
+     println!("rms_ready_queue start");
+ 
+-   
+-
+     let periods = [150usize, 150, 40];
+     let exit_codes = [31i32, 32, 33];
+     let mut kids = [0isize; 3];
+@@ -25,10 +25,15 @@ pub fn main() -> i32 {
+     for i in 0..3 {
+         let p = fork();
+         let start_time = get_time();
+-        
++
+         if p == 0 {
+             let start_time = get_time();
+-            println!("child pid={} start_time={} priority={}", getpid(), start_time, get_priority());
++            println!(
++                "child pid={} start_time={} priority={}",
++                getpid(),
++                start_time,
++                get_priority()
++            );
+ 
+             if set_period(periods[i]) != 0 {
+                 println!("set_period failed");
+@@ -50,14 +55,25 @@ pub fn main() -> i32 {
+             for c in 0..rounds {
+                 if c % 5000000 == 0 {
+                     let current_time = get_time();
+-                    println!("                               run pid={} current_time={} times={}", getpid(), current_time, c);
++                    println!(
++                        "                               run pid={} current_time={} times={}",
++                        getpid(),
++                        current_time,
++                        c
++                    );
+                 }
+-               // yield_();
++                // yield_();
+             }
+             exit(exit_codes[i]);
+-        }else {
+-            println!("father pid={} start_time={} priority={}", getpid(), start_time, get_priority());}
+-        
++        } else {
++            println!(
++                "father pid={} start_time={} priority={}",
++                getpid(),
++                start_time,
++                get_priority()
++            );
++        }
++
+         kids[i] = p;
+     }
+ 
+diff --git a/user/src/bin/rms_remaining_slice.rs b/user/src/bin/rms_remaining_slice.rs
+index db540b1b..d4960465 100644
+--- a/user/src/bin/rms_remaining_slice.rs
++++ b/user/src/bin/rms_remaining_slice.rs
+@@ -34,12 +34,7 @@ pub fn main() -> i32 {
+             exit(-2);
+         }
+         if r != last {
+-            println!(
+-                "[A] pid={} poll={} remaining_slice={}",
+-                getpid(),
+-                poll,
+-                r
+-            );
++            println!("[A] pid={} poll={} remaining_slice={}", getpid(), poll, r);
+             last = r;
+         }
+     }
+diff --git a/user/src/bin/rms_round_robin.rs b/user/src/bin/rms_round_robin.rs
+index 3b5fdd7e..e74f04e1 100644
+--- a/user/src/bin/rms_round_robin.rs
++++ b/user/src/bin/rms_round_robin.rs
+@@ -4,7 +4,7 @@
+ #[macro_use]
+ extern crate user_lib;
+ 
+-use user_lib::{exit, fork, getpid, set_period, get_priority, get_period, waitpid, yield_};
++use user_lib::{exit, fork, get_period, get_priority, getpid, set_period, waitpid, yield_};
+ 
+ #[unsafe(no_mangle)]
+ pub fn main() -> i32 {
+@@ -16,7 +16,13 @@ pub fn main() -> i32 {
+             set_period(100);
+             for c in 0..6000usize {
+                 if c % 400 == 0 {
+-                    println!("rr pid={} cnt={} period={} priority={}", getpid(), c, get_period(), get_priority());
++                    println!(
++                        "rr pid={} cnt={} period={} priority={}",
++                        getpid(),
++                        c,
++                        get_period(),
++                        get_priority()
++                    );
+                 }
+                 yield_();
+             }
+diff --git a/user/src/bin/rms_syscall_probe.rs b/user/src/bin/rms_syscall_probe.rs
+index 67fde728..243eda89 100644
+--- a/user/src/bin/rms_syscall_probe.rs
++++ b/user/src/bin/rms_syscall_probe.rs
+@@ -4,50 +4,53 @@
+ #[macro_use]
+ extern crate user_lib;
+ 
+-use user_lib::{exit, get_period, get_priority, set_period};
++use user_lib::{get_period, get_priority, set_period};
+ 
+ #[unsafe(no_mangle)]
+-pub fn main() -> i32  { 
+-    println!("rms_syscall_probe start");
+-    println!(
+-        "[probe] initial period={} priority={}",
+-        get_period(),
+-        get_priority()
+-    );
+-
+-    let periods = [20usize, 100, 500, 800];
+-    let mut last_prio: Option<isize> = None;
+-
+-    let mut cnt =100;
+-
+-
+-    for &p in &periods {
+-        
+-        let gp = set_period(200+cnt);
+-        cnt += 100;
+-        let gp = get_period();
+-        let pr = get_priority();
++pub fn main() -> i32 {
++    const CASES: [(usize, isize); 8] = [
++        (1, 0),
++        (2, 0),
++        (33, 0),
++        (34, 1),
++        (100, 3),
++        (512, 15),
++        (1023, 30),
++        (1024, 31),
++    ];
++
++    println!("TEST name=rms_syscall_probe phase=start");
++    for &(period, expected) in &CASES {
++        let result = set_period(period);
++        let actual_period = get_period();
++        let actual_priority = get_priority();
+         println!(
+-            "[probe] after set_period({}): period={} priority={}",
+-            p, gp, pr
++            "DATA period={} priority={} expected={} result={}",
++            actual_period, actual_priority, expected, result
+         );
+-        // if gp != p as isize {
+-        //     println!("[probe] FAIL: period mismatch (expected {})", p);
+-        //     exit(-2);
+-        // }
+-        // if let Some(lp) = last_prio {
+-        //     if pr <= lp {
+-        //         println!(
+-        //             "[probe] FAIL: priority should strictly increase as period increases (got {} after {})",
+-        //             pr, lp
+-        //         );
+-        //         exit(-3);
+-        //     }
+-        // }
+-        // last_prio = Some(pr);
++        if result != 0 || actual_period != period as isize || actual_priority != expected {
++            println!(
++                "FAIL name=rms_syscall_probe reason=mismatch period={} got={} expected={}",
++                period, actual_priority, expected
++            );
++            return 1;
++        }
+     }
+ 
+-    println!("rms_syscall_probe done");
++    let saved_period = get_period();
++    let saved_priority = get_priority();
++    for invalid in [0usize, 1025] {
++        if set_period(invalid) != -1
++            || get_period() != saved_period
++            || get_priority() != saved_priority
++        {
++            println!(
++                "FAIL name=rms_syscall_probe reason=invalid_changed_state period={}",
++                invalid
++            );
++            return 2;
++        }
++    }
++    println!("PASS name=rms_syscall_probe");
+     0
+-
+ }
+diff --git a/user/src/lib.rs b/user/src/lib.rs
+index f462ac3c..96eb12ee 100644
+--- a/user/src/lib.rs
++++ b/user/src/lib.rs
+@@ -70,6 +70,15 @@ pub use syscall::sys_get_remaining_slice as get_remaining_slice;
+ pub fn fork() -> isize {
+     sys_fork()
+ }
++pub fn fork_with_period(period_ticks: usize) -> isize {
++    sys_fork_with_period(period_ticks)
++}
++pub fn sched_stats_reset() -> isize {
++    sys_sched_stats_reset()
++}
++pub fn sched_stats_dump() -> isize {
++    sys_sched_stats_dump()
++}
+ pub fn exec(path: &str) -> isize {
+     sys_exec(path)
+ }
+diff --git a/user/src/syscall.rs b/user/src/syscall.rs
+index a54b3f5a..f84ea5c6 100644
+--- a/user/src/syscall.rs
++++ b/user/src/syscall.rs
+@@ -13,6 +13,9 @@ const SYSCALL_SET_PERIOD: usize = 261;
+ const SYSCALL_GET_PRIORITY: usize = 262;
+ const SYSCALL_GET_PERIOD: usize = 263;
+ const SYSCALL_GET_REMAINING_SLICE: usize = 264;
++const SYSCALL_FORK_WITH_PERIOD: usize = 265;
++const SYSCALL_SCHED_STATS_RESET: usize = 266;
++const SYSCALL_SCHED_STATS_DUMP: usize = 267;
+ 
+ fn syscall(id: usize, args: [usize; 3]) -> isize {
+     let mut ret: isize;
+@@ -60,6 +63,10 @@ pub fn sys_fork() -> isize {
+     syscall(SYSCALL_FORK, [0, 0, 0])
+ }
+ 
++pub fn sys_fork_with_period(period_ticks: usize) -> isize {
++    syscall(SYSCALL_FORK_WITH_PERIOD, [period_ticks, 0, 0])
++}
++
+ pub fn sys_exec(path: &str) -> isize {
+     syscall(SYSCALL_EXEC, [path.as_ptr() as usize, 0, 0])
+ }
+@@ -83,3 +90,11 @@ pub fn sys_get_period() -> isize {
+ pub fn sys_get_remaining_slice() -> isize {
+     syscall(SYSCALL_GET_REMAINING_SLICE, [0, 0, 0])
+ }
++
++pub fn sys_sched_stats_reset() -> isize {
++    syscall(SYSCALL_SCHED_STATS_RESET, [0, 0, 0])
++}
++
++pub fn sys_sched_stats_dump() -> isize {
++    syscall(SYSCALL_SCHED_STATS_DUMP, [0, 0, 0])
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/os/src/task/stats.rs b/home/siyun/rCore-Tutorial-v3/os/src/task/stats.rs
+new file mode 100644
+index 00000000..469510b3
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/os/src/task/stats.rs
+@@ -0,0 +1,75 @@
++//! Lightweight scheduler counters used by thesis experiments.
++
++use crate::sync::UPSafeCell;
++use lazy_static::lazy_static;
++
++use super::ENABLE_SCHED_STATS;
++
++#[derive(Clone, Copy, Default)]
++pub struct SchedStats {
++    pub timer_interrupts: usize,
++    pub schedule_calls: usize,
++    pub context_switches: usize,
++    pub fetch_calls: usize,
++    pub queue_levels_scanned: usize,
++    pub timeslice_preemptions: usize,
++    pub priority_preemptions: usize,
++    pub waitpid_blocks: usize,
++    pub task_wakeups: usize,
++}
++
++lazy_static! {
++    static ref SCHED_STATS: UPSafeCell<SchedStats> =
++        unsafe { UPSafeCell::new(SchedStats::default()) };
++}
++
++fn update(f: impl FnOnce(&mut SchedStats)) {
++    if ENABLE_SCHED_STATS {
++        f(&mut SCHED_STATS.exclusive_access());
++    }
++}
++
++/// Reset every scheduler experiment counter to zero.
++pub fn reset() {
++    *SCHED_STATS.exclusive_access() = SchedStats::default();
++}
++
++/// Return a consistent copy of all scheduler experiment counters.
++pub fn snapshot() -> SchedStats {
++    *SCHED_STATS.exclusive_access()
++}
++
++pub fn inc_timer_interrupts() {
++    update(|stats| stats.timer_interrupts += 1);
++}
++
++pub fn inc_schedule_calls() {
++    update(|stats| stats.schedule_calls += 1);
++}
++
++pub fn inc_context_switches() {
++    update(|stats| stats.context_switches += 1);
++}
++
++pub fn record_fetch(queue_levels_scanned: usize) {
++    update(|stats| {
++        stats.fetch_calls += 1;
++        stats.queue_levels_scanned += queue_levels_scanned;
++    });
++}
++
++pub fn inc_timeslice_preemptions() {
++    update(|stats| stats.timeslice_preemptions += 1);
++}
++
++pub fn inc_priority_preemptions() {
++    update(|stats| stats.priority_preemptions += 1);
++}
++
++pub fn inc_waitpid_blocks() {
++    update(|stats| stats.waitpid_blocks += 1);
++}
++
++pub fn inc_task_wakeups() {
++    update(|stats| stats.task_wakeups += 1);
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/scripts/collect_thesis_env.sh b/home/siyun/rCore-Tutorial-v3/scripts/collect_thesis_env.sh
+new file mode 100755
+index 00000000..3e981b49
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/scripts/collect_thesis_env.sh
+@@ -0,0 +1,41 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++ROOT=$(cd "$(dirname "$0")/.." && pwd)
++OUT="$ROOT/thesis-results/env"
++mkdir -p "$OUT" "$ROOT/thesis-results/logs" "$ROOT/thesis-results/data" "$ROOT/thesis-results/code"
++
++uname -a >"$OUT/uname.txt"
++lsb_release -a >"$OUT/ubuntu.txt" 2>&1
++lscpu >"$OUT/lscpu.txt"
++rustc -Vv >"$OUT/rustc.txt"
++cargo -V >"$OUT/cargo.txt"
++rustup show >"$OUT/rustup.txt"
++qemu-system-riscv64 --version >"$OUT/qemu.txt"
++git -C "$ROOT" rev-parse HEAD >"$OUT/commit.txt"
++git -C "$ROOT" status --short >"$OUT/git-status.txt"
++git -C "$ROOT" diff >"$OUT/experiment.patch"
++while IFS= read -r file; do
++    git -C "$ROOT" diff --no-index -- /dev/null "$ROOT/$file" \
++        >>"$OUT/experiment.patch" || [[ $? -eq 1 ]]
++done < <(
++    git -C "$ROOT" ls-files --others --exclude-standard |
++        grep -E '^(os/src/|user/src/|scripts/|thesis-results/README\.md$)'
++)
++
++cp "$ROOT/os/src/task/stats.rs" "$ROOT/thesis-results/code/stats.rs"
++cp "$ROOT"/user/src/bin/rms_*.rs "$ROOT/thesis-results/code/"
++cp "$ROOT/user/src/bin/sched_common_workload.rs" "$ROOT/thesis-results/code/"
++cp "$ROOT/user/src/bin/waitpid_common.rs" "$ROOT/thesis-results/code/"
++
++if [[ -d /home/siyun/rCore-baseline ]]; then
++    mkdir -p "$ROOT/thesis-results/code/baseline"
++    cp /home/siyun/rCore-baseline/os/src/task/stats.rs \
++        "$ROOT/thesis-results/code/baseline/stats.rs"
++    cp /home/siyun/rCore-baseline/user/src/bin/sched_common_workload.rs \
++        "$ROOT/thesis-results/code/baseline/"
++    cp /home/siyun/rCore-baseline/user/src/bin/waitpid_common.rs \
++        "$ROOT/thesis-results/code/baseline/"
++fi
++
++printf 'Environment captured in %s\n' "$OUT"
+diff --git a/home/siyun/rCore-Tutorial-v3/scripts/extract_thesis_results.sh b/home/siyun/rCore-Tutorial-v3/scripts/extract_thesis_results.sh
+new file mode 100755
+index 00000000..f662eda2
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/scripts/extract_thesis_results.sh
+@@ -0,0 +1,148 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++ROOT=$(cd "$(dirname "$0")/.." && pwd)
++LOG_DIR="$ROOT/thesis-results/logs"
++DATA_DIR="$ROOT/thesis-results/data"
++mkdir -p "$DATA_DIR"
++
++grep -hE '^(TEST|DATA|EVENT|RESULT|PASS|FAIL|SCHED_STATS)' \
++    "$LOG_DIR"/*.log >"$DATA_DIR/all-events.txt" || true
++
++printf '%s\n' 'run,period,expected_priority,actual_priority,pass' \
++    >"$DATA_DIR/priority-map.csv"
++for log in "$LOG_DIR"/E1-priority-map-run*.log; do
++    [[ -e "$log" ]] || continue
++    run=$(basename "$log" | sed -E 's/.*run([0-9]+).*/\1/')
++    while read -r line; do
++        period=$(sed -nE 's/.*period=([0-9]+).*/\1/p' <<<"$line")
++        actual=$(sed -nE 's/.*priority=([0-9]+).*/\1/p' <<<"$line")
++        expected=$(sed -nE 's/.*expected=([0-9]+).*/\1/p' <<<"$line")
++        pass=false
++        [[ "$actual" == "$expected" ]] && pass=true
++        printf '%s,%s,%s,%s,%s\n' "$run" "$period" "$expected" "$actual" "$pass" \
++            >>"$DATA_DIR/priority-map.csv"
++    done < <(grep '^DATA period=.* expected=' "$log")
++done
++
++printf '%s\n' 'run,observed_period_order,pass' >"$DATA_DIR/ready-order.csv"
++for log in "$LOG_DIR"/E2-ready-order-run*.log; do
++    [[ -e "$log" ]] || continue
++    run=$(basename "$log" | sed -E 's/.*run([0-9]+).*/\1/')
++    order=$(grep '^EVENT type=first_run ' "$log" |
++        sed -nE 's/.*period=([0-9]+).*/\1/p' |
++        paste -sd, -)
++    pass=false
++    [[ "$order" == '100,400,900' ]] && pass=true
++    printf '%s,"%s",%s\n' "$run" "$order" "$pass" >>"$DATA_DIR/ready-order.csv"
++done
++
++printf '%s\n' \
++    'run,create_time_ms,high_start_ms,low_finish_ms,latency_ms,priority_preemptions,pass' \
++    >"$DATA_DIR/preempt.csv"
++
++for log in "$LOG_DIR"/E3-preempt-run*.log; do
++    [[ -e "$log" ]] || continue
++    run=$(basename "$log" | sed -E 's/.*run([0-9]+).*/\1/')
++    result=$(grep '^RESULT create_time_ms=' "$log" | tail -n 1 || true)
++    stats=$(grep '^SCHED_STATS ' "$log" | tail -n 1 || true)
++    pass=false
++    grep -q '^PASS name=rms_preempt_strict' "$log" && pass=true
++    create=$(sed -nE 's/.*create_time_ms=([0-9-]+).*/\1/p' <<<"$result")
++    high=$(sed -nE 's/.*high_start_ms=([0-9-]+).*/\1/p' <<<"$result")
++    low=$(sed -nE 's/.*low_finish_ms=([0-9-]+).*/\1/p' <<<"$result")
++    latency=$(sed -nE 's/.*latency_ms=([0-9-]+).*/\1/p' <<<"$result")
++    preempt=$(sed -nE 's/.*prio_preempt=([0-9]+).*/\1/p' <<<"$stats")
++    printf '%s,%s,%s,%s,%s,%s,%s\n' \
++        "$run" "$create" "$high" "$low" "$latency" "$preempt" "$pass" \
++        >>"$DATA_DIR/preempt.csv"
++done
++
++printf '%s\n' \
++    'run,task1_units,task2_units,task3_units,max_min_ratio,jain_index,timeslice_preemptions' \
++    >"$DATA_DIR/rr-fairness.csv"
++
++for log in "$LOG_DIR"/E4-rr-run*.log; do
++    [[ -e "$log" ]] || continue
++    run=$(basename "$log" | sed -E 's/.*run([0-9]+).*/\1/')
++    mapfile -t units < <(
++        grep '^RESULT type=worker ' "$log" |
++            sed -nE 's/.*work_units=([0-9]+).*/\1/p' |
++            head -n 3
++    )
++    [[ ${#units[@]} -eq 3 ]] || continue
++    stats=$(grep '^SCHED_STATS ' "$log" | tail -n 1 || true)
++    ts=$(sed -nE 's/.*ts_preempt=([0-9]+).*/\1/p' <<<"$stats")
++    metrics=$(awk -v a="${units[0]}" -v b="${units[1]}" -v c="${units[2]}" '
++        BEGIN {
++            min=a; if (b<min) min=b; if (c<min) min=c;
++            max=a; if (b>max) max=b; if (c>max) max=c;
++            sum=a+b+c; squares=a*a+b*b+c*c;
++            printf "%.6f,%.6f", max/min, (sum*sum)/(3*squares);
++        }')
++    printf '%s,%s,%s,%s,%s,%s\n' \
++        "$run" "${units[0]}" "${units[1]}" "${units[2]}" "$metrics" "$ts" \
++        >>"$DATA_DIR/rr-fairness.csv"
++done
++
++printf '%s\n' \
++    'version,time_slice,tasks,run,elapsed_ms,context_switches,fetch_calls,queue_levels_scanned,avg_scan' \
++    >"$DATA_DIR/baseline-comparison.csv"
++
++for log in "$LOG_DIR"/E7-*-run*.log; do
++    [[ -e "$log" ]] || continue
++    name=$(basename "$log")
++    case "$name" in
++        E7-baseline-*) version=baseline; time_slice=1 ;;
++        E7-improved-ts1-*) version=improved; time_slice=1 ;;
++        E7-improved-ts2-*) version=improved; time_slice=2 ;;
++        *) continue ;;
++    esac
++    run=$(sed -nE 's/.*run([0-9]+).*/\1/p' <<<"$name")
++    mapfile -t cases < <(grep '^RESULT type=case ' "$log")
++    mapfile -t stat_lines < <(grep '^SCHED_STATS ' "$log")
++    count=${#cases[@]}
++    [[ ${#stat_lines[@]} -lt $count ]] && count=${#stat_lines[@]}
++    for ((i = 0; i < count; i++)); do
++        tasks=$(sed -nE 's/.*tasks=([0-9]+).*/\1/p' <<<"${cases[$i]}")
++        elapsed=$(sed -nE 's/.*elapsed_ms=([0-9]+).*/\1/p' <<<"${cases[$i]}")
++        switches=$(sed -nE 's/.*switch=([0-9]+).*/\1/p' <<<"${stat_lines[$i]}")
++        fetch=$(sed -nE 's/.*fetch=([0-9]+).*/\1/p' <<<"${stat_lines[$i]}")
++        scan=$(sed -nE 's/.*scan=([0-9]+).*/\1/p' <<<"${stat_lines[$i]}")
++        avg=$(awk -v scan="$scan" -v fetch="$fetch" \
++            'BEGIN { if (fetch == 0) print "0"; else printf "%.6f", scan/fetch }')
++        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
++            "$version" "$time_slice" "$tasks" "$run" "$elapsed" \
++            "$switches" "$fetch" "$scan" "$avg" \
++            >>"$DATA_DIR/baseline-comparison.csv"
++    done
++done
++
++printf '%s\n' \
++    'version,run,elapsed_ms,waitpid_not_ready,wait_yields,waitpid_blocks,wakeups,context_switches' \
++    >"$DATA_DIR/waitpid.csv"
++
++for log in "$LOG_DIR"/E6-waitpid-common-*-run*.log; do
++    [[ -e "$log" ]] || continue
++    name=$(basename "$log")
++    case "$name" in
++        *-baseline-*) version=baseline ;;
++        *-improved-*) version=improved ;;
++        *) continue ;;
++    esac
++    run=$(sed -nE 's/.*run([0-9]+).*/\1/p' <<<"$name")
++    result=$(grep '^RESULT waited_pid=' "$log" | tail -n 1 || true)
++    stats=$(grep '^SCHED_STATS ' "$log" | tail -n 1 || true)
++    elapsed=$(sed -nE 's/.*elapsed_ms=([0-9]+).*/\1/p' <<<"$result")
++    not_ready=$(sed -nE 's/.*wait_not_ready=([0-9]+).*/\1/p' <<<"$stats")
++    wait_yield=$(sed -nE 's/.*wait_yield=([0-9]+).*/\1/p' <<<"$stats")
++    blocks=$(sed -nE 's/.*wait_block=([0-9]+).*/\1/p' <<<"$stats")
++    wakeups=$(sed -nE 's/.*wakeup=([0-9]+).*/\1/p' <<<"$stats")
++    switches=$(sed -nE 's/.*switch=([0-9]+).*/\1/p' <<<"$stats")
++    printf '%s,%s,%s,%s,%s,%s,%s,%s\n' \
++        "$version" "$run" "$elapsed" "${not_ready:-0}" "${wait_yield:-0}" \
++        "${blocks:-0}" "${wakeups:-0}" "$switches" \
++        >>"$DATA_DIR/waitpid.csv"
++done
++
++printf 'Extracted data into %s\n' "$DATA_DIR"
+diff --git a/home/siyun/rCore-Tutorial-v3/scripts/run_qemu_test.sh b/home/siyun/rCore-Tutorial-v3/scripts/run_qemu_test.sh
+new file mode 100755
+index 00000000..134d2086
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/scripts/run_qemu_test.sh
+@@ -0,0 +1,43 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++if [[ $# -lt 2 || $# -gt 3 ]]; then
++    echo "usage: $0 <app-name> <log-name> [run-seconds]" >&2
++    exit 2
++fi
++
++SCRIPT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
++ROOT=${RC_ROOT:-$SCRIPT_ROOT}
++RESULT_ROOT=${RESULT_ROOT:-$SCRIPT_ROOT}
++APP=$1
++LOG_NAME=$2
++RUN_SECONDS=${3:-8}
++BOOT_SECONDS=${BOOT_SECONDS:-3}
++LOG_DIR="$RESULT_ROOT/thesis-results/logs"
++mkdir -p "$LOG_DIR"
++
++case "$LOG_NAME" in
++    *.log) ;;
++    *) LOG_NAME="${LOG_NAME}.log" ;;
++esac
++
++if [[ ${SKIP_BUILD:-0} == 1 ]]; then
++    RUN_COMMAND=(
++        qemu-system-riscv64
++        -machine virt
++        -nographic
++        -bios "$ROOT/bootloader/rustsbi-qemu.bin"
++        -device "loader,file=$ROOT/os/target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000"
++    )
++else
++    RUN_COMMAND=(make -C "$ROOT/os" run)
++fi
++
++(
++    sleep "$BOOT_SECONDS"
++    printf '%s\n' "$APP"
++    sleep "$RUN_SECONDS"
++    printf '\001x'
++) | timeout "$((RUN_SECONDS + 30))" "${RUN_COMMAND[@]}" 2>&1 | tee "$LOG_DIR/$LOG_NAME"
++
++printf 'Saved %s\n' "$LOG_DIR/$LOG_NAME"
+diff --git a/home/siyun/rCore-Tutorial-v3/scripts/summarize_thesis_results.sh b/home/siyun/rCore-Tutorial-v3/scripts/summarize_thesis_results.sh
+new file mode 100755
+index 00000000..f7a65c32
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/scripts/summarize_thesis_results.sh
+@@ -0,0 +1,74 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++ROOT=$(cd "$(dirname "$0")/.." && pwd)
++DATA="$ROOT/thesis-results/data"
++
++metric_summary() {
++    local file=$1
++    local column=$2
++    local label=$3
++    local values
++    values=$(tail -n +2 "$file" | cut -d, -f"$column" | sort -n)
++    awk -v label="$label" '
++        { values[NR]=$1; sum+=$1; sumsq+=$1*$1 }
++        END {
++            if (NR == 0) exit;
++            median = (NR % 2) ? values[(NR+1)/2] : (values[NR/2]+values[NR/2+1])/2;
++            variance = (NR > 1) ? (sumsq-sum*sum/NR)/(NR-1) : 0;
++            printf "%s count=%d min=%.6f max=%.6f mean=%.6f median=%.6f stddev=%.6f\n",
++                label, NR, values[1], values[NR], sum/NR, median, sqrt(variance);
++        }
++    ' <<<"$values"
++}
++
++{
++    metric_summary "$DATA/preempt.csv" 5 preempt_latency_ms
++    metric_summary "$DATA/rr-fairness.csv" 5 rr_max_min_ratio
++    metric_summary "$DATA/rr-fairness.csv" 6 rr_jain_index
++
++    awk -F, '
++        NR > 1 {
++            key=$1;
++            n[key]++; elapsed[key]+=$3; switches[key]+=$8;
++            not_ready[key]+=$4; yields[key]+=$5; blocks[key]+=$6; wakeups[key]+=$7;
++        }
++        END {
++            for (key in n) {
++                printf "waitpid version=%s runs=%d mean_elapsed_ms=%.3f mean_switches=%.3f mean_not_ready=%.3f mean_yields=%.3f mean_blocks=%.3f mean_wakeups=%.3f\n",
++                    key, n[key], elapsed[key]/n[key], switches[key]/n[key],
++                    not_ready[key]/n[key], yields[key]/n[key],
++                    blocks[key]/n[key], wakeups[key]/n[key];
++            }
++        }
++    ' "$DATA/waitpid.csv" | sort
++} >"$DATA/statistical-summary.txt"
++
++printf '%s\n' \
++    'version,time_slice,tasks,runs,mean_elapsed_ms,stddev_elapsed_ms,mean_context_switches,stddev_context_switches,mean_avg_scan' \
++    >"$DATA/baseline-comparison-summary.csv"
++
++awk -F, '
++    NR > 1 {
++        key=$1 FS $2 FS $3;
++        n[key]++;
++        elapsed[key]+=$5; elapsed2[key]+=$5*$5;
++        switches[key]+=$6; switches2[key]+=$6*$6;
++        scans[key]+=$9;
++    }
++    END {
++        for (key in n) {
++            split(key, parts, FS);
++            elapsed_var=(n[key]>1) ? (elapsed2[key]-elapsed[key]*elapsed[key]/n[key])/(n[key]-1) : 0;
++            switch_var=(n[key]>1) ? (switches2[key]-switches[key]*switches[key]/n[key])/(n[key]-1) : 0;
++            printf "%s,%s,%s,%d,%.3f,%.3f,%.3f,%.3f,%.6f\n",
++                parts[1], parts[2], parts[3], n[key],
++                elapsed[key]/n[key], sqrt(elapsed_var),
++                switches[key]/n[key], sqrt(switch_var), scans[key]/n[key];
++        }
++    }
++' "$DATA/baseline-comparison.csv" |
++    sort -t, -k1,1 -k2,2n -k3,3n \
++    >>"$DATA/baseline-comparison-summary.csv"
++
++printf 'Wrote statistical summaries into %s\n' "$DATA"
+diff --git a/home/siyun/rCore-Tutorial-v3/thesis-results/README.md b/home/siyun/rCore-Tutorial-v3/thesis-results/README.md
+new file mode 100644
+index 00000000..61c31b14
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/thesis-results/README.md
+@@ -0,0 +1,31 @@
++# Thesis Experiment Results
++
++This directory keeps raw logs, extracted CSV data, environment snapshots, and
++the exact experiment sources used for the thesis scheduler evaluation.
++
++## Workflow
++
++```bash
++./scripts/collect_thesis_env.sh
++./scripts/run_qemu_test.sh rms_priority_map E1-priority-map-run01 3
++./scripts/run_qemu_test.sh rms_ready_order E2-ready-order-run01 3
++./scripts/run_qemu_test.sh rms_preempt_strict E3-preempt-run01 3
++./scripts/run_qemu_test.sh rms_rr_fairness E4-rr-run01 6
++./scripts/run_qemu_test.sh rms_slice_trace E5-slice-run01 4
++./scripts/run_qemu_test.sh rms_waitpid_block E6-waitpid-run01 4
++./scripts/extract_thesis_results.sh
++./scripts/summarize_thesis_results.sh
++```
++
++Use the same host and QEMU version for all baseline and improved runs. Keep
++every raw log, including outliers and failed runs.
++
++The E7 comparison uses:
++
++- `baseline`: detached `origin/ch5` worktree at `/home/siyun/rCore-baseline`
++- `improved,time_slice=1`: `make -C os build CARGO_FEATURES=timeslice-1`
++- `improved,time_slice=2`: default `make -C os build`
++
++Key generated tables are `data/preempt.csv`, `data/rr-fairness.csv`,
++`data/waitpid.csv`, `data/baseline-comparison.csv`, and their statistical
++summaries.
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_preempt_strict.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_preempt_strict.rs
+new file mode 100644
+index 00000000..8bcbd6b0
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_preempt_strict.rs
+@@ -0,0 +1,79 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{
++    exit, fork_with_period, get_time, getpid, sched_stats_dump, sched_stats_reset, set_period,
++    waitpid,
++};
++
++fn busy_until(deadline: isize) -> usize {
++    let mut units = 0usize;
++    let mut value = 1usize;
++    while get_time() < deadline {
++        for i in 0..20_000usize {
++            value = value.wrapping_mul(1664525).wrapping_add(i + 1013904223);
++        }
++        units += 1;
++    }
++    black_box(value);
++    units
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=rms_preempt_strict phase=start");
++    if set_period(900) != 0 {
++        println!("FAIL name=rms_preempt_strict reason=parent_set_period");
++        return 1;
++    }
++
++    sched_stats_reset();
++    let create_time = get_time();
++    println!("EVENT type=high_ready_base time={}", create_time);
++    let child = fork_with_period(100);
++    if child < 0 {
++        println!("FAIL name=rms_preempt_strict reason=fork");
++        return 2;
++    }
++    if child == 0 {
++        let start = get_time();
++        let latency = start - create_time;
++        println!(
++            "EVENT type=high_first_run pid={} time={} latency_ms={}",
++            getpid(),
++            start,
++            latency
++        );
++        exit(latency as i32);
++    }
++
++    let units = busy_until(create_time + 250);
++    let low_end = get_time();
++    println!(
++        "EVENT type=low_finish pid={} time={} work_units={}",
++        getpid(),
++        low_end,
++        units
++    );
++    let mut exit_code = -1;
++    let waited = waitpid(child as usize, &mut exit_code);
++    sched_stats_dump();
++    let high_start = create_time + exit_code as isize;
++    if waited != child || exit_code < 0 || high_start >= low_end {
++        println!(
++            "FAIL name=rms_preempt_strict reason=timing waited={} latency_ms={} high_start={} low_finish={}",
++            waited, exit_code, high_start, low_end
++        );
++        return 3;
++    }
++    println!(
++        "RESULT create_time_ms={} high_start_ms={} low_finish_ms={} latency_ms={}",
++        create_time, high_start, low_end, exit_code
++    );
++    println!("PASS name=rms_preempt_strict");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_priority_map.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_priority_map.rs
+new file mode 100644
+index 00000000..db84a31f
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_priority_map.rs
+@@ -0,0 +1,68 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use user_lib::{get_period, get_priority, set_period};
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    const CASES: [(usize, isize); 8] = [
++        (1, 0),
++        (2, 0),
++        (33, 0),
++        (34, 1),
++        (100, 3),
++        (512, 15),
++        (1023, 30),
++        (1024, 31),
++    ];
++
++    println!("TEST name=rms_priority_map phase=start");
++    for &(period, expected) in &CASES {
++        if set_period(period) != 0 {
++            println!(
++                "FAIL name=rms_priority_map reason=set_failed period={}",
++                period
++            );
++            return 1;
++        }
++        let got_period = get_period();
++        let got_priority = get_priority();
++        println!(
++            "DATA period={} priority={} expected={}",
++            got_period, got_priority, expected
++        );
++        if got_period != period as isize || got_priority != expected {
++            println!(
++                "FAIL name=rms_priority_map reason=mismatch period={} got={} expected={}",
++                period, got_priority, expected
++            );
++            return 2;
++        }
++    }
++
++    let saved_period = get_period();
++    let saved_priority = get_priority();
++    for invalid in [0usize, 1025] {
++        let result = set_period(invalid);
++        println!(
++            "DATA period={} result={} retained_period={} retained_priority={}",
++            invalid,
++            result,
++            get_period(),
++            get_priority()
++        );
++        if result != -1 || get_period() != saved_period || get_priority() != saved_priority {
++            println!(
++                "FAIL name=rms_priority_map reason=invalid_changed_state period={}",
++                invalid
++            );
++            return 3;
++        }
++    }
++
++    println!("PASS name=rms_priority_map");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_ready_order.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_ready_order.rs
+new file mode 100644
+index 00000000..649cedbb
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_ready_order.rs
+@@ -0,0 +1,55 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use user_lib::{
++    exit, fork_with_period, get_period, get_priority, get_time, getpid, set_period, waitpid,
++};
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    const PERIODS: [usize; 3] = [900, 400, 100];
++
++    println!("TEST name=rms_ready_order phase=start");
++    if set_period(1) != 0 {
++        println!("FAIL name=rms_ready_order reason=parent_set_period");
++        return 1;
++    }
++
++    let mut children = [0isize; 3];
++    for (index, &period) in PERIODS.iter().enumerate() {
++        let pid = fork_with_period(period);
++        if pid < 0 {
++            println!("FAIL name=rms_ready_order reason=fork period={}", period);
++            return 2;
++        }
++        if pid == 0 {
++            println!(
++                "EVENT type=first_run pid={} period={} priority={} time={}",
++                getpid(),
++                get_period(),
++                get_priority(),
++                get_time()
++            );
++            exit(index as i32);
++        }
++        children[index] = pid;
++        println!("DATA type=created pid={} period={}", pid, period);
++    }
++
++    let mut exit_code = -1;
++    for (index, &pid) in children.iter().enumerate() {
++        let waited = waitpid(pid as usize, &mut exit_code);
++        if waited != pid || exit_code != index as i32 {
++            println!(
++                "FAIL name=rms_ready_order reason=wait pid={} got={} code={}",
++                pid, waited, exit_code
++            );
++            return 3;
++        }
++    }
++    println!("PASS name=rms_ready_order expected_period_order=100,400,900");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_regression.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_regression.rs
+new file mode 100644
+index 00000000..fcb3c619
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_regression.rs
+@@ -0,0 +1,43 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use user_lib::{exit, fork_with_period, waitpid};
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    const PERIODS: [usize; 8] = [1, 34, 100, 256, 400, 512, 900, 1024];
++    const ROUNDS: usize = 200;
++
++    println!("TEST name=rms_regression phase=start rounds={}", ROUNDS);
++    for round in 0..ROUNDS {
++        let period = PERIODS[round % PERIODS.len()];
++        let pid = fork_with_period(period);
++        if pid < 0 {
++            println!(
++                "FAIL name=rms_regression reason=fork round={} period={}",
++                round, period
++            );
++            return 1;
++        }
++        if pid == 0 {
++            exit((round % 100) as i32);
++        }
++        let mut exit_code = -1;
++        let waited = waitpid(pid as usize, &mut exit_code);
++        if waited != pid || exit_code != (round % 100) as i32 {
++            println!(
++                "FAIL name=rms_regression reason=wait round={} pid={} got={} code={}",
++                round, pid, waited, exit_code
++            );
++            return 2;
++        }
++        if round % 25 == 24 {
++            println!("DATA completed_rounds={}", round + 1);
++        }
++    }
++    println!("PASS name=rms_regression rounds={}", ROUNDS);
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_rr_fairness.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_rr_fairness.rs
+new file mode 100644
+index 00000000..efe172ee
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_rr_fairness.rs
+@@ -0,0 +1,71 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{
++    exit, fork_with_period, get_time, getpid, sched_stats_dump, sched_stats_reset, set_period,
++    waitpid,
++};
++
++fn run_worker(duration_ms: isize) -> usize {
++    let deadline = get_time() + duration_ms;
++    let mut units = 0usize;
++    let mut value = getpid() as usize + 1;
++    while get_time() < deadline {
++        for i in 0..25_000usize {
++            value = value.rotate_left(7) ^ i.wrapping_mul(0x9e37);
++        }
++        units += 1;
++    }
++    black_box(value);
++    units
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=rms_rr_fairness phase=start");
++    if set_period(1) != 0 {
++        println!("FAIL name=rms_rr_fairness reason=parent_set_period");
++        return 1;
++    }
++
++    sched_stats_reset();
++    let mut children = [0isize; 3];
++    for (index, slot) in children.iter_mut().enumerate() {
++        let pid = fork_with_period(400);
++        if pid < 0 {
++            println!("FAIL name=rms_rr_fairness reason=fork index={}", index);
++            return 2;
++        }
++        if pid == 0 {
++            let start = get_time();
++            println!("EVENT type=worker_start pid={} time={}", getpid(), start);
++            let units = run_worker(1000);
++            println!(
++                "RESULT type=worker pid={} work_units={} elapsed_ms={}",
++                getpid(),
++                units,
++                get_time() - start
++            );
++            exit(0);
++        }
++        *slot = pid;
++    }
++
++    let mut exit_code = -1;
++    for &pid in &children {
++        if waitpid(pid as usize, &mut exit_code) != pid || exit_code != 0 {
++            println!(
++                "FAIL name=rms_rr_fairness reason=wait pid={} code={}",
++                pid, exit_code
++            );
++            return 3;
++        }
++    }
++    sched_stats_dump();
++    println!("PASS name=rms_rr_fairness metrics=derive_from_RESULT_lines");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_slice_trace.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_slice_trace.rs
+new file mode 100644
+index 00000000..93fcc59a
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_slice_trace.rs
+@@ -0,0 +1,70 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{
++    exit, fork_with_period, get_remaining_slice, get_time, getpid, sched_stats_dump,
++    sched_stats_reset, set_period, waitpid,
++};
++
++fn work_chunk(seed: usize) -> usize {
++    let mut value = seed;
++    for i in 0..40_000usize {
++        value = value.rotate_left(3).wrapping_add(i ^ 0x5a5a);
++    }
++    black_box(value)
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=rms_slice_trace phase=start");
++    if set_period(1) != 0 {
++        println!("FAIL name=rms_slice_trace reason=parent_set_period");
++        return 1;
++    }
++
++    sched_stats_reset();
++    let mut children = [0isize; 2];
++    for slot in &mut children {
++        let pid = fork_with_period(400);
++        if pid < 0 {
++            println!("FAIL name=rms_slice_trace reason=fork");
++            return 2;
++        }
++        if pid == 0 {
++            let deadline = get_time() + 250;
++            let mut last = -1;
++            let mut seed = getpid() as usize;
++            while get_time() < deadline {
++                seed = work_chunk(seed);
++                let remaining = get_remaining_slice();
++                if remaining != last {
++                    println!(
++                        "EVENT type=slice pid={} time={} remaining={}",
++                        getpid(),
++                        get_time(),
++                        remaining
++                    );
++                    last = remaining;
++                }
++            }
++            println!("RESULT type=worker_done pid={} checksum={}", getpid(), seed);
++            exit(0);
++        }
++        *slot = pid;
++    }
++
++    let mut exit_code = -1;
++    for &pid in &children {
++        if waitpid(pid as usize, &mut exit_code) != pid || exit_code != 0 {
++            println!("FAIL name=rms_slice_trace reason=wait pid={}", pid);
++            return 3;
++        }
++    }
++    sched_stats_dump();
++    println!("PASS name=rms_slice_trace");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_waitpid_block.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_waitpid_block.rs
+new file mode 100644
+index 00000000..319cf6c9
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/rms_waitpid_block.rs
+@@ -0,0 +1,76 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{
++    exit, fork_with_period, get_time, getpid, sched_stats_dump, sched_stats_reset, set_period,
++    waitpid,
++};
++
++fn busy_for(duration_ms: isize) -> usize {
++    let deadline = get_time() + duration_ms;
++    let mut value = 1usize;
++    while get_time() < deadline {
++        for i in 0..30_000usize {
++            value = value.wrapping_add(i).rotate_left(5);
++        }
++    }
++    black_box(value)
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=rms_waitpid_block phase=start");
++    if set_period(1) != 0 {
++        println!("FAIL name=rms_waitpid_block reason=parent_set_period");
++        return 1;
++    }
++    let child = fork_with_period(900);
++    if child < 0 {
++        println!("FAIL name=rms_waitpid_block reason=fork");
++        return 2;
++    }
++    if child == 0 {
++        println!(
++            "EVENT type=child_start pid={} time={}",
++            getpid(),
++            get_time()
++        );
++        let checksum = busy_for(300);
++        println!(
++            "EVENT type=child_exit pid={} time={} checksum={}",
++            getpid(),
++            get_time(),
++            checksum
++        );
++        exit(37);
++    }
++
++    sched_stats_reset();
++    let wait_start = get_time();
++    println!(
++        "EVENT type=parent_wait pid={} child={} time={}",
++        getpid(),
++        child,
++        wait_start
++    );
++    let mut exit_code = -1;
++    let waited = waitpid(child as usize, &mut exit_code);
++    let wait_end = get_time();
++    println!(
++        "RESULT waited_pid={} exit_code={} elapsed_ms={}",
++        waited,
++        exit_code,
++        wait_end - wait_start
++    );
++    sched_stats_dump();
++    if waited != child || exit_code != 37 {
++        println!("FAIL name=rms_waitpid_block reason=wait_result");
++        return 3;
++    }
++    println!("PASS name=rms_waitpid_block");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/sched_common_workload.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/sched_common_workload.rs
+new file mode 100644
+index 00000000..16cac9f9
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/sched_common_workload.rs
+@@ -0,0 +1,73 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{exit, fork, get_time, getpid, sched_stats_dump, sched_stats_reset, waitpid};
++
++fn fixed_work() -> usize {
++    let mut value = getpid() as usize + 1;
++    for i in 0..80_000_000usize {
++        value = value.wrapping_mul(1664525).wrapping_add(i ^ 1013904223);
++    }
++    black_box(value)
++}
++
++fn run_case(tasks: usize) -> bool {
++    let mut children = [0isize; 8];
++    sched_stats_reset();
++    let start = get_time();
++    for slot in children.iter_mut().take(tasks) {
++        let pid = fork();
++        if pid < 0 {
++            println!(
++                "FAIL name=sched_common_workload reason=fork tasks={}",
++                tasks
++            );
++            return false;
++        }
++        if pid == 0 {
++            let checksum = fixed_work();
++            println!(
++                "RESULT type=worker tasks={} pid={} checksum={}",
++                tasks,
++                getpid(),
++                checksum
++            );
++            exit(0);
++        }
++        *slot = pid;
++    }
++
++    let mut exit_code = -1;
++    for &pid in children.iter().take(tasks) {
++        if waitpid(pid as usize, &mut exit_code) != pid || exit_code != 0 {
++            println!(
++                "FAIL name=sched_common_workload reason=wait tasks={} pid={}",
++                tasks, pid
++            );
++            return false;
++        }
++    }
++    println!(
++        "RESULT type=case tasks={} elapsed_ms={}",
++        tasks,
++        get_time() - start
++    );
++    sched_stats_dump();
++    true
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=sched_common_workload phase=start");
++    for tasks in [1usize, 2, 4, 8] {
++        if !run_case(tasks) {
++            return 1;
++        }
++    }
++    println!("PASS name=sched_common_workload");
++    0
++}
+diff --git a/home/siyun/rCore-Tutorial-v3/user/src/bin/waitpid_common.rs b/home/siyun/rCore-Tutorial-v3/user/src/bin/waitpid_common.rs
+new file mode 100644
+index 00000000..c56b52ef
+--- /dev/null
++++ b/home/siyun/rCore-Tutorial-v3/user/src/bin/waitpid_common.rs
+@@ -0,0 +1,57 @@
++#![no_std]
++#![no_main]
++
++#[macro_use]
++extern crate user_lib;
++
++use core::hint::black_box;
++use user_lib::{exit, fork, get_time, getpid, sched_stats_dump, sched_stats_reset, waitpid};
++
++fn busy_for(duration_ms: isize) -> usize {
++    let deadline = get_time() + duration_ms;
++    let mut value = 1usize;
++    while get_time() < deadline {
++        for i in 0..30_000usize {
++            value = value.wrapping_add(i).rotate_left(5);
++        }
++    }
++    black_box(value)
++}
++
++#[unsafe(no_mangle)]
++pub fn main() -> i32 {
++    println!("TEST name=waitpid_common phase=start");
++    let child = fork();
++    if child < 0 {
++        println!("FAIL name=waitpid_common reason=fork");
++        return 1;
++    }
++    if child == 0 {
++        let checksum = busy_for(300);
++        println!(
++            "EVENT type=child_exit pid={} time={} checksum={}",
++            getpid(),
++            get_time(),
++            checksum
++        );
++        exit(37);
++    }
++
++    sched_stats_reset();
++    let start = get_time();
++    let mut exit_code = -1;
++    let waited = waitpid(child as usize, &mut exit_code);
++    println!(
++        "RESULT waited_pid={} exit_code={} elapsed_ms={}",
++        waited,
++        exit_code,
++        get_time() - start
++    );
++    sched_stats_dump();
++    if waited != child || exit_code != 37 {
++        println!("FAIL name=waitpid_common reason=wait_result");
++        return 2;
++    }
++    println!("PASS name=waitpid_common");
++    0
++}

@@ -1,0 +1,84 @@
+[rustsbi] RustSBI version 0.3.1, adapting to RISC-V SBI v1.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.2
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e010f6
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+[34m[ INFO] [kernel] Hello, world![0m
+last 31377 Physical Frames.
+.text [0x80200000, 0x8020f000)
+.rodata [0x8020f000, 0x80214000)
+.data [0x80214000, 0x8035e000)
+.bss [0x8035e000, 0x8056f000)
+mapping .text section
+mapping .rodata section
+mapping .data section
+mapping .bss section
+mapping physical memory
+mapping memory-mapped registers
+remap_test passed!
+after initproc!
+/**** APPS ****
+exit
+fantastic_text
+forkexec
+forktest
+forktest2
+forktest_simple
+forktree
+hello_world
+initproc
+matrix
+sched_common_workload
+sleep
+sleep_simple
+stack_overflow
+user_shell
+usertests
+usertests-simple
+waitpid_common
+yield
+**************/
+Rust user shell
+>> sched_common_workload
+TEST name=sched_common_workload phase=start
+RESULT type=worker tasks=1 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=1 elapsed_ms=57
+SCHED_STATS timer=5 schedule=24 switch=24 fetch=24 scan=24 ts_preempt=5 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=18 wait_yield=18
+RESULT type=worker tasks=2 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=2 pid=3 checksum=18306773212941819396
+RESULT type=case tasks=2 elapsed_ms=115
+SCHED_STATS timer=12 schedule=38 switch=38 fetch=38 scan=38 ts_preempt=12 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+RESULT type=worker tasks=4 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=4 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=4 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=4 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=4 elapsed_ms=231
+SCHED_STATS timer=23 schedule=50 switch=50 fetch=50 scan=50 ts_preempt=23 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=23 wait_yield=23
+RESULT type=worker tasks=8 pid=5 checksum=13062349532259696134
+RESULT type=worker tasks=8 pid=4 checksum=15684561372600757765
+RESULT type=worker tasks=8 pid=8 checksum=5195714011236511241
+RESULT type=worker tasks=8 pid=10 checksum=18398034404263939595
+RESULT type=worker tasks=8 pid=3 checksum=18306773212941819396
+RESULT type=worker tasks=8 pid=7 checksum=7817925851577572872
+RESULT type=worker tasks=8 pid=9 checksum=2573502170895449610
+RESULT type=worker tasks=8 pid=6 checksum=10440137691918634503
+RESULT type=case tasks=8 elapsed_ms=463
+SCHED_STATS timer=45 schedule=77 switch=77 fetch=77 scan=77 ts_preempt=45 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=24 wait_yield=24
+PASS name=sched_common_workload
+Shell: Process 2 exited with code 0
+>> QEMU: Terminated
+

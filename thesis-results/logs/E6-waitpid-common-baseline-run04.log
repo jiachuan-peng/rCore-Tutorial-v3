@@ -1,0 +1,64 @@
+[rustsbi] RustSBI version 0.3.1, adapting to RISC-V SBI v1.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.2
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e010f6
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+[34m[ INFO] [kernel] Hello, world![0m
+last 31377 Physical Frames.
+.text [0x80200000, 0x8020f000)
+.rodata [0x8020f000, 0x80214000)
+.data [0x80214000, 0x8035e000)
+.bss [0x8035e000, 0x8056f000)
+mapping .text section
+mapping .rodata section
+mapping .data section
+mapping .bss section
+mapping physical memory
+mapping memory-mapped registers
+remap_test passed!
+after initproc!
+/**** APPS ****
+exit
+fantastic_text
+forkexec
+forktest
+forktest2
+forktest_simple
+forktree
+hello_world
+initproc
+matrix
+sched_common_workload
+sleep
+sleep_simple
+stack_overflow
+user_shell
+usertests
+usertests-simple
+waitpid_common
+yield
+**************/
+Rust user shell
+>> waitpid_common
+TEST name=waitpid_common phase=start
+EVENT type=child_exit pid=3 time=684 checksum=5353679838312718951
+RESULT waited_pid=3 exit_code=37 elapsed_ms=301
+SCHED_STATS timer=29 schedule=120 switch=120 fetch=120 scan=120 ts_preempt=29 prio_preempt=0 wait_block=0 wakeup=0 wait_not_ready=90 wait_yield=90
+PASS name=waitpid_common
+Shell: Process 2 exited with code 0
+>> QEMU: Terminated
+

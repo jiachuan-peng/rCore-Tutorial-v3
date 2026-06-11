@@ -1,5 +1,7 @@
 //!Implementation of [`TaskManager`]
-use super::{ENABLE_SCHED_TRACE, LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus};
+use super::{
+    ENABLE_SCHED_TRACE, LOWEST_PRIORITY, MAX_PRIORITY, TaskControlBlock, TaskStatus, stats,
+};
 use crate::sync::UPSafeCell;
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
@@ -29,10 +31,7 @@ impl TaskManager {
         for (p, q) in self.ready_queues.iter().enumerate() {
             let n = q.len();
             if n != 0 {
-                println!(
-                    "[TaskManager] ready_queues[{}] len = {}",
-                    p, n
-                );
+                println!("[TaskManager] ready_queues[{}] len = {}", p, n);
             }
         }
     }
@@ -54,9 +53,7 @@ impl TaskManager {
             let inn = task.inner_exclusive_access();
             println!(
                 "[sched] enqueue pid={} prio={} period={}",
-                pid,
-                inn.priority,
-                inn.period_ticks
+                pid, inn.priority, inn.period_ticks
             );
         }
         self.ready_queues[queue_idx].push_back(task);
@@ -65,6 +62,7 @@ impl TaskManager {
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
         for priority in 0..MAX_PRIORITY {
             if let Some(task) = self.ready_queues[priority].pop_front() {
+                stats::record_fetch(priority + 1);
                 if ENABLE_SCHED_TRACE {
                     let pid = task.getpid();
                     let inn = task.inner_exclusive_access();
@@ -73,6 +71,7 @@ impl TaskManager {
                 return Some(task);
             }
         }
+        stats::record_fetch(MAX_PRIORITY);
         None
     }
     /// Read-only check: any ready task strictly higher precedence than `current_priority`?

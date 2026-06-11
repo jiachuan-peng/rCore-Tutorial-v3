@@ -18,6 +18,7 @@ mod context;
 mod manager;
 mod pid;
 mod processor;
+pub(crate) mod stats;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
@@ -28,12 +29,11 @@ use alloc::sync::Arc;
 use lazy_static::*;
 pub use manager::{TaskManager, fetch_task};
 use switch::__switch;
-use task::{TaskControlBlock, TaskStatus};
 pub use task::{
-    period_to_priority,
     DEFAULT_PERIOD_TICKS, DEFAULT_TIME_SLICE, HIGHEST_PRIORITY, LOWEST_PRIORITY, MAX_PERIOD_TICKS,
-    MAX_PRIORITY, MIN_PERIOD_TICKS, WAITPID_NONE,
+    MAX_PRIORITY, MIN_PERIOD_TICKS, WAITPID_NONE, period_to_priority,
 };
+use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 pub use manager::add_task;
@@ -42,9 +42,14 @@ pub use processor::{
     Processor, current_task, current_trap_cx, current_user_token, run_tasks, schedule,
     take_current_task,
 };
+pub use stats::{reset as reset_sched_stats, snapshot as sched_stats_snapshot};
 
 /// When true, emit concise `[sched]` lines from the scheduler (default off for tests).
 pub const ENABLE_SCHED_TRACE: bool = false;
+/// Enable lightweight scheduler counters used by experiment programs.
+pub const ENABLE_SCHED_STATS: bool = true;
+/// Emit per-tick slice transitions. Keep disabled except for short E5 traces.
+pub const ENABLE_VERBOSE_TICK_TRACE: bool = false;
 
 /// Decrement the running task's time slice on a timer tick; returns true when the slice just ended.
 pub fn current_task_time_slice_exhausted() -> bool {
@@ -57,6 +62,13 @@ pub fn current_task_time_slice_exhausted() -> bool {
             inner.remaining_slice -= 1;
         }
         let exhausted = inner.remaining_slice == 0;
+        if ENABLE_VERBOSE_TICK_TRACE {
+            println!(
+                "SLICE pid={} remaining={}",
+                task.getpid(),
+                inner.remaining_slice
+            );
+        }
         if exhausted && ENABLE_SCHED_TRACE {
             let pid = task.getpid();
             let prio = inner.priority;
@@ -87,6 +99,9 @@ pub fn should_preempt_current() -> bool {
                 task.getpid(),
                 current_priority
             );
+        }
+        if preempt {
+            stats::inc_priority_preemptions();
         }
         preempt
     } else {
@@ -139,6 +154,7 @@ pub fn block_current_and_run_next(waiting_pid: isize) {
     task_inner.waiting_pid = waiting_pid;
     drop(task_inner);
 
+    stats::inc_waitpid_blocks();
     schedule(task_cx_ptr);
 }
 
@@ -202,6 +218,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
             p_inner.task_status = TaskStatus::Ready;
             p_inner.waiting_pid = WAITPID_NONE;
             drop(p_inner);
+            stats::inc_task_wakeups();
             add_task(parent_arc);
         }
     }

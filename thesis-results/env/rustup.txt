@@ -1,0 +1,17 @@
+Default host: x86_64-unknown-linux-gnu
+rustup home:  /home/siyun/.rustup
+
+installed toolchains
+--------------------
+stable-x86_64-unknown-linux-gnu
+nightly-x86_64-unknown-linux-gnu (default)
+nightly-2022-01-19-x86_64-unknown-linux-gnu
+nightly-2025-02-18-x86_64-unknown-linux-gnu (active)
+
+active toolchain
+----------------
+name: nightly-2025-02-18-x86_64-unknown-linux-gnu
+active because: overridden by '/home/siyun/rCore-Tutorial-v3/rust-toolchain.toml'
+installed targets:
+  riscv64gc-unknown-none-elf
+  x86_64-unknown-linux-gnu

@@ -13,6 +13,9 @@ const SYSCALL_SET_PERIOD: usize = 261;
 const SYSCALL_GET_PRIORITY: usize = 262;
 const SYSCALL_GET_PERIOD: usize = 263;
 const SYSCALL_GET_REMAINING_SLICE: usize = 264;
+const SYSCALL_FORK_WITH_PERIOD: usize = 265;
+const SYSCALL_SCHED_STATS_RESET: usize = 266;
+const SYSCALL_SCHED_STATS_DUMP: usize = 267;
 
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -60,6 +63,10 @@ pub fn sys_fork() -> isize {
     syscall(SYSCALL_FORK, [0, 0, 0])
 }
 
+pub fn sys_fork_with_period(period_ticks: usize) -> isize {
+    syscall(SYSCALL_FORK_WITH_PERIOD, [period_ticks, 0, 0])
+}
+
 pub fn sys_exec(path: &str) -> isize {
     syscall(SYSCALL_EXEC, [path.as_ptr() as usize, 0, 0])
 }
@@ -82,4 +89,12 @@ pub fn sys_get_period() -> isize {
 
 pub fn sys_get_remaining_slice() -> isize {
     syscall(SYSCALL_GET_REMAINING_SLICE, [0, 0, 0])
+}
+
+pub fn sys_sched_stats_reset() -> isize {
+    syscall(SYSCALL_SCHED_STATS_RESET, [0, 0, 0])
+}
+
+pub fn sys_sched_stats_dump() -> isize {
+    syscall(SYSCALL_SCHED_STATS_DUMP, [0, 0, 0])
 }

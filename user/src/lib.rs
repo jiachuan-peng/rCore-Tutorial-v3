@@ -70,6 +70,15 @@ pub use syscall::sys_get_remaining_slice as get_remaining_slice;
 pub fn fork() -> isize {
     sys_fork()
 }
+pub fn fork_with_period(period_ticks: usize) -> isize {
+    sys_fork_with_period(period_ticks)
+}
+pub fn sched_stats_reset() -> isize {
+    sys_sched_stats_reset()
+}
+pub fn sched_stats_dump() -> isize {
+    sys_sched_stats_dump()
+}
 pub fn exec(path: &str) -> isize {
     sys_exec(path)
 }
